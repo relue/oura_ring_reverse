@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AUTH KEY"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:background="#E3F2FD"
+        android:padding="2dp"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/authKeyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="00 42 6e d8 16 dc ec e4 8d d9 96 8c 1f 36 c0 b5"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:background="#F5F5F5"
+        android:padding="4dp"
+        android:textColor="#1976D2"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MAC"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:background="#E8F5E9"
+        android:padding="2dp"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/ringMacText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="5E:19:EC"
+        android:textSize="9sp"
+        android:fontFamily="monospace"
+        android:background="#F5F5F5"
+        android:padding="4dp"
+        android:textColor="#388E3C"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ready"
+        android:textSize="11sp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="HEARTBEAT"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:id="@+id/bpmText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-- BPM"
+        android:textSize="24sp"
+        android:textColor="#FF0000"
+        android:textStyle="bold"
+        android:layout_gravity="center"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/ibiText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-- ms"
+        android:textSize="10sp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="2dp" />
+
+    <TextView
+        android:id="@+id/countText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Heartbeats: 0"
+        android:textSize="10sp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Row 1: Connection and Data Buttons -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:layout_marginBottom="2dp">
+
+        <Button
+            android:id="@+id/connectButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="Connect"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#4CAF50"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/authRefreshButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="Auth"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#2196F3"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/syncTimeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="SyncTime"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#9C27B0"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/testSetAuthKeyButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="SetAuth"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#FFA500" />
+    </LinearLayout>
+
+    <!-- Row 2: Data and Heartbeat Buttons -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:layout_marginBottom="2dp">
+
+        <Button
+            android:id="@+id/getDataButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="GetData"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#9C27B0"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/getSleepDataButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="GetSleep"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#673AB7"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/startHbCaptureButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="StartHB"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/stopHbCaptureButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="StopHB"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp" />
+    </LinearLayout>
+
+    <!-- Row 3: Utility Buttons -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_gravity="center"
+        android:layout_marginBottom="4dp">
+
+        <Button
+            android:id="@+id/showDataButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="ShowData"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#FF5722"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/clearLogButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="Clear"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:layout_marginEnd="2dp" />
+
+        <Button
+            android:id="@+id/factoryResetButton"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:text="FactoryReset"
+            android:textSize="9sp"
+            android:minHeight="0dp"
+            android:paddingVertical="2dp"
+            android:paddingHorizontal="6dp"
+            android:backgroundTint="#FF0000" />
+    </LinearLayout>
+
+    <!-- Debug Log Panel -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="DEBUG LOG"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:background="#EEEEEE"
+        android:padding="4dp"
+        android:layout_marginBottom="2dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5"
+        android:padding="4dp">
+
+        <TextView
+            android:id="@+id/debugLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="App started. Ready to connect...\n"
+            android:textSize="9sp"
+            android:fontFamily="monospace"
+            android:textColor="#000000" />
+    </ScrollView>
+
+</LinearLayout>

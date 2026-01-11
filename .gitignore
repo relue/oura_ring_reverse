@@ -1,0 +1,49 @@
+# Large binary files (copy manually when moving to new PC)
+_large_files/
+
+# APK and native binaries
+*.xapk
+*.apk
+*.so
+*.pt.enc
+extracted/
+patched/
+decompiled/
+
+# Android build artifacts
+android_app/build/
+android_app/.gradle/
+android_app/app/build/
+android_app/local.properties
+android_app/.idea/
+android_app/*.iml
+
+# Gradle wrapper (can be regenerated)
+android_app/gradle/wrapper/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE files
+.idea/
+*.iml
+.vs/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/

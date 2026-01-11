@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- Header with back button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="← Back"
+            android:textSize="12sp"
+            android:minHeight="0dp"
+            android:paddingVertical="4dp"
+            android:paddingHorizontal="12dp"
+            android:backgroundTint="#607D8B" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Event Browser"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="60dp" />
+    </LinearLayout>
+
+    <!-- Filter dropdown -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp"
+        android:background="#E3F2FD"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Filter:"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp" />
+
+        <Spinner
+            android:id="@+id/eventTypeSpinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="32dp" />
+    </LinearLayout>
+
+    <!-- Event summary -->
+    <TextView
+        android:id="@+id/summaryText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Loading events..."
+        android:textSize="12sp"
+        android:background="#F5F5F5"
+        android:padding="8dp"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Scrollable event list -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#F5F5F5"
+        android:padding="4dp">
+
+        <TextView
+            android:id="@+id/eventListText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="10sp"
+            android:fontFamily="monospace"
+            android:textColor="#000000" />
+    </ScrollView>
+
+</LinearLayout>

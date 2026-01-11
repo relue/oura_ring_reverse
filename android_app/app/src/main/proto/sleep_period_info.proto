@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package oura;
+
+// SLEEP_PERIOD_INFO_2 (0x6a) - Minute-by-minute sleep metrics
+message SleepPeriodInfo {
+  repeated int64 timestamp = 1;      // Unix timestamps (milliseconds)
+  repeated float average_hr = 2;      // Average heart rate (BPM)
+  repeated float hr_trend = 3;        // Heart rate trend indicator
+  repeated float mzci = 4;            // HRV: Maurer-Zywietz Cross Correlation Index
+  repeated float dzci = 5;            // HRV: Detrended Zywietz Cross Correlation Index
+  repeated float breath = 6;          // Average breathing rate (breaths/min)
+  repeated float breath_v = 7;        // Breathing variability (std dev)
+  repeated int32 motion_count = 8;    // Motion/movement detection count
+  repeated int32 sleep_state = 9;     // Sleep state (0=awake, 1=light, 2=deep, 3=REM)
+  repeated float cv = 10;             // PPG signal quality (coefficient of variation)
+}
