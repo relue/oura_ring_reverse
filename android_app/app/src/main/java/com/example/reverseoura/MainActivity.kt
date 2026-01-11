@@ -4,9 +4,14 @@ import android.Manifest
 import android.bluetooth.*
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +24,104 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_PERMISSIONS = 1001
+        private const val TAG = "ReverseOura"
+        const val ACTION_COMMAND = "com.example.reverseoura.COMMAND"
+    }
+
+    // ADB Broadcast Receiver for remote control
+    private val commandReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val cmd = intent?.getStringExtra("cmd") ?: return
+            Log.d(TAG, "ADB Command received: $cmd")
+            log("📡 ADB Command: $cmd")
+
+            when (cmd.lowercase()) {
+                "scan", "connect" -> {
+                    Log.d(TAG, "Executing: connectToRing()")
+                    connectToRing()
+                }
+                "auth" -> {
+                    Log.d(TAG, "Executing: performAuthentication()")
+                    if (isConnected) performAuthentication()
+                    else log("❌ Not connected")
+                }
+                "heartbeat", "start_hb" -> {
+                    Log.d(TAG, "Executing: startHeartbeatCapture()")
+                    if (isConnected && isAuthenticated) startHeartbeatCapture()
+                    else log("❌ Not connected/authenticated")
+                }
+                "stop", "stop_hb" -> {
+                    Log.d(TAG, "Executing: stopMonitoring()")
+                    stopMonitoring()
+                }
+                "data", "get_data" -> {
+                    Log.d(TAG, "Executing: getDataFromRing()")
+                    if (isConnected && isAuthenticated) getDataFromRing()
+                    else log("❌ Not connected/authenticated")
+                }
+                "sleep", "get_sleep" -> {
+                    Log.d(TAG, "Executing: getSleepDataFromRing()")
+                    if (isConnected && isAuthenticated) getSleepDataFromRing()
+                    else log("❌ Not connected/authenticated")
+                }
+                "status" -> {
+                    val status = "Connected: $isConnected, Authenticated: $isAuthenticated, HB Count: $heartbeatCount"
+                    Log.d(TAG, "Status: $status")
+                    log("📊 $status")
+                }
+                "disconnect" -> {
+                    Log.d(TAG, "Executing: disconnect")
+                    bluetoothGatt?.disconnect()
+                    bluetoothGatt?.close()
+                    isConnected = false
+                    isAuthenticated = false
+                    log("🔌 Disconnected")
+                }
+                "setauth", "set_auth_key" -> {
+                    Log.d(TAG, "Executing: testSetAuthKey()")
+                    testSetAuthKey()
+                }
+                "synctime", "sync_time" -> {
+                    Log.d(TAG, "Executing: sendTimeSyncRequest()")
+                    if (isConnected && isAuthenticated) sendTimeSyncRequest()
+                    else log("❌ Not connected/authenticated")
+                }
+                "factoryreset", "factory_reset" -> {
+                    Log.d(TAG, "Executing: sendFactoryReset()")
+                    sendFactoryReset()
+                }
+                else -> {
+                    // Check for set_key:HEXKEY command to set auth key without writing to ring
+                    if (cmd.startsWith("set_key:")) {
+                        val hexKey = cmd.substringAfter("set_key:").replace(" ", "")
+                        try {
+                            val keyBytes = hexKey.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                            if (keyBytes.size == 16) {
+                                currentAuthKey = keyBytes
+                                saveAuthKey()
+                                updateAuthKeyUI()
+                                log("✅ Auth key set: ${keyBytes.joinToString(" ") { "%02x".format(it) }}")
+                            } else {
+                                log("❌ Key must be 16 bytes (32 hex chars)")
+                            }
+                        } catch (e: Exception) {
+                            log("❌ Invalid hex key: $hexKey")
+                        }
+                    } else if (cmd.startsWith("send_hex:")) {
+                        val hexStr = cmd.substringAfter("send_hex:")
+                        try {
+                            val bytes = hexStr.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                            Log.d(TAG, "Sending hex command: $hexStr")
+                            sendCommand(bytes)
+                        } catch (e: Exception) {
+                            log("❌ Invalid hex: $hexStr")
+                        }
+                    } else {
+                        log("❓ Unknown command: $cmd")
+                    }
+                }
+            }
+        }
     }
 
     // BLE UUIDs (from reverse engineering)
@@ -210,6 +313,12 @@ class MainActivity : AppCompatActivity() {
 
         log("MainActivity created")
         log("Bluetooth adapter: ${if (::bluetoothAdapter.isInitialized) "OK" else "NOT FOUND"}")
+
+        // Register ADB command receiver
+        val filter = IntentFilter(ACTION_COMMAND)
+        registerReceiver(commandReceiver, filter, Context.RECEIVER_EXPORTED)
+        Log.d(TAG, "ADB command receiver registered")
+        log("📡 ADB receiver ready - use: adb shell am broadcast -a $ACTION_COMMAND --es cmd \"<command>\"")
 
         // Check permissions
         checkPermissions()
@@ -426,11 +535,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPermissions() {
         log("Checking permissions...")
-        val permissions = arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
+        val permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            // Android 12+ (API 31+)
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        } else {
+            // Android 11 and below - only need location
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        }
 
         val missing = permissions.filter {
             ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -631,18 +748,26 @@ class MainActivity : AppCompatActivity() {
                     statusText.text = "Accept pairing dialog..."
 
                     // Wait for bonding to complete before connecting
-                    // In a production app, you'd use a BroadcastReceiver for ACTION_BOND_STATE_CHANGED
-                    // For now, we'll try to connect after a delay
                     android.os.Handler(mainLooper).postDelayed({
                         log("Checking bond state after pairing...")
                         if (device.bondState == BluetoothDevice.BOND_BONDED) {
                             log("✅ Device successfully bonded!")
                             proceedWithConnection(device)
                         } else {
-                            log("❌ Pairing failed or not completed")
-                            statusText.text = "Pairing failed"
+                            log("⚡ Pairing not complete yet - retrying check...")
+                            // Give more time and retry
+                            android.os.Handler(mainLooper).postDelayed({
+                                log("Final bond state check...")
+                                if (device.bondState == BluetoothDevice.BOND_BONDED) {
+                                    log("✅ Device successfully bonded!")
+                                    proceedWithConnection(device)
+                                } else {
+                                    log("❌ Pairing failed or not completed")
+                                    statusText.text = "Pairing failed"
+                                }
+                            }, 10000) // Wait another 10 seconds
                         }
-                    }, 5000) // Wait 5 seconds for user to accept pairing
+                    }, 5000) // Initial 5 second wait
                     return
                 } else {
                     log("❌ Failed to initiate bonding")
@@ -653,7 +778,6 @@ class MainActivity : AppCompatActivity() {
             BluetoothDevice.BOND_BONDING -> {
                 log("⚡ Device is currently bonding - waiting...")
                 statusText.text = "Bonding in progress..."
-                // Wait for bonding to complete
                 android.os.Handler(mainLooper).postDelayed({
                     connectToDevice(device) // Retry
                 }, 2000)
@@ -2541,6 +2665,12 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         log("Activity destroyed - cleaning up")
+        try {
+            unregisterReceiver(commandReceiver)
+            Log.d(TAG, "ADB command receiver unregistered")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering receiver: ${e.message}")
+        }
         stopMonitoring()
     }
 }

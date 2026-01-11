@@ -17,7 +17,10 @@ WRITE_CHAR_UUID = "98ed0002-a541-11e4-b6a0-0002a5d5c51b"
 NOTIFY_CHAR_UUID = "98ed0003-a541-11e4-b6a0-0002a5d5c51b"
 
 # Known Oura Ring MAC address
-OURA_MAC = "4B:DD:91:1C:33:61"
+OURA_MAC = "64:18:26:AB:80:E6"
+
+# BLE Adapter (use CSR dongle instead of Intel AX211)
+BLE_ADAPTER = "hci1"
 
 # Initialization commands (verified from protocol analysis)
 CMD_INIT_1 = bytes([0x2f, 0x02, 0x20, 0x02])
@@ -80,13 +83,14 @@ class OuraHeartbeatMonitor:
         self.heartbeat_count = 0
 
     async def find_device(self):
-        """Scan for Oura Ring"""
-        print(f"🔍 Scanning for Oura Ring ({self.mac_address})...")
+        """Scan for Oura Ring by name (addresses rotate)"""
+        print(f"🔍 Scanning for Oura Ring using adapter {BLE_ADAPTER}...")
 
-        devices = await BleakScanner.discover(timeout=10.0)
+        devices = await BleakScanner.discover(timeout=10.0, adapter=BLE_ADAPTER)
 
         for device in devices:
-            if device.address.upper() == self.mac_address.upper():
+            # Match by name since Oura Ring 4 uses rotating MAC addresses
+            if device.name and 'oura' in device.name.lower():
                 print(f"✓ Found Oura Ring: {device.name} ({device.address})")
                 return device
 
@@ -129,7 +133,7 @@ class OuraHeartbeatMonitor:
 
             # Connect
             print(f"\n🔗 Connecting to {device.address}...")
-            async with BleakClient(device.address) as client:
+            async with BleakClient(device.address, adapter=BLE_ADAPTER) as client:
                 self.client = client
                 print(f"✓ Connected!")
 
