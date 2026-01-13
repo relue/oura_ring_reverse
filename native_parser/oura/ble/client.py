@@ -53,12 +53,6 @@ class OuraClient:
         self.adapter = adapter
         self.data_dir = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
 
-        # Load stored auth key if no key provided
-        if auth_key:
-            self.auth_key = auth_key
-        else:
-            self.auth_key = self._load_auth_key() or DEFAULT_AUTH_KEY
-
         self.client: Optional[BleakClient] = None
         self.device = None
 
@@ -72,16 +66,22 @@ class OuraClient:
         self.event_data: List[bytes] = []
         self.heartbeat_count = 0
 
-        # Existing callbacks (for events)
+        # Callbacks for events
         self.on_heartbeat: Optional[Callable[[int, int, float, int], None]] = None
         self.on_event: Optional[Callable[[int, str, bytes], None]] = None
         self.on_auth_response: Optional[Callable[[str, Any], None]] = None
 
-        # NEW callbacks for web integration
+        # Callbacks for web integration (must be initialized before _load_auth_key)
         self.on_log: Optional[Callable[[str, str], None]] = None
         self.on_status_change: Optional[Callable[[dict], None]] = None
         self.on_progress: Optional[Callable[[str, int, int, str], None]] = None
         self.on_sync_point: Optional[Callable[[dict], None]] = None
+
+        # Load stored auth key if no key provided (after callbacks init)
+        if auth_key:
+            self.auth_key = auth_key
+        else:
+            self.auth_key = self._load_auth_key() or DEFAULT_AUTH_KEY
 
         # Data retrieval state
         self.current_seq_num = 0
