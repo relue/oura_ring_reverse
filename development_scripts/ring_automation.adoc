@@ -93,6 +93,10 @@ adb shell am broadcast -a com.example.reverseoura.COMMAND --es cmd "<command>"
 | `factoryreset` or `factory_reset`
 | Factory reset ring (erases all data!)
 | Connected
+
+| `export` or `export_data`
+| Export captured events to file for PC analysis
+| Events captured (after `data` command)
 |===
 
 == Connection Process

@@ -1,0 +1,2070 @@
+syntax = "proto3";
+
+package oura.ringeventparser;
+
+// Auto-generated from decompiled Ringeventparser.java
+// Using hybrid tree-sitter + regex extraction pipeline
+
+enum ACM_HWID {
+  ACM_HWID_NOT_INITIALIZED = 0;
+  ACM_HWID_BMI160 = 1;
+  ACM_HWID_ICM42605 = 2;
+  ACM_HWID_BMI270 = 3;
+  ACM_HWID_BMA456 = 4;
+}
+
+enum AFE_HWID {
+  AFE_HWID_NOT_INITIALIZED = 0;
+  AFE_HWID_MAX86171 = 1;
+  AFE_HWID_MAX86173 = 2;
+  AFE_HWID_MAX86178 = 3;
+}
+
+enum AVER {
+  LED_PULSE_1 = 0;
+  LED_PULSES_2_AVERAGED = 1;
+  LED_PULSES_4_AVERAGED = 2;
+  LED_PULSES_8_AVERAGED = 3;
+  LED_PULSES_16_AVERAGED = 4;
+  LED_PULSES_32_AVERAGED = 5;
+  LED_PULSES_64_AVERAGED = 6;
+  LED_PULSES_128_AVERAGED = 7;
+}
+
+enum AccelerometerMode {
+  DISABLED = 0;
+  ORIENTATION_CHANGE_DETECTION = 1;
+  MOVEMENT_DETECTION = 2;
+  ACTIVITY_MONITORING = 3;
+  DOUBLE_TAP_DETECTION = 4;
+}
+
+enum AccelerometerRange {
+  ACC_RANGE_OFF = 0;
+  ACC_RANGE_2G = 1;
+  ACC_RANGE_4G = 2;
+  ACC_RANGE_8G = 3;
+  ACC_RANGE_16G = 4;
+}
+
+enum AlertType {
+  ALERT_TYPE_UNKNOWN = 0;
+  ALERT_TYPE_SITTING = 1;
+  ALERT_TYPE_LOW_BATTERY = 2;
+  ALERT_TYPE_SHUTDOWN_OUT_OF_POWER = 3;
+  ALERT_TYPE_SHUTDOWN_FACTORY_RESET = 4;
+  ALERT_TYPE_SHUTDOWN_PRODUCTION_MODE = 5;
+}
+
+enum AmplitudeState {
+  MEAS_AMP_GOOD = 0;
+  MEAS_AMP_TOO_LOW = 1;
+  MEAS_AMP_TOO_HIGH = 2;
+  MEAS_STABLE_AMP_GOOD = 3;
+  MEAS_STABLE_AMP_TOO_LOW = 4;
+  MEAS_STABLE_AMP_TOO_HIGH = 5;
+  MEAS_SIGNAL_LOW = 6;
+}
+
+enum Capability {
+  CAP_BACKGROUND_DFU = 0;
+  CAP_RESEARCH_DATA = 1;
+  CAP_DAYTIME_HR = 2;
+  CAP_EXERCISE_HR = 3;
+  CAP_SPO2 = 4;
+  CAP_BUNDLING = 5;
+  CAP_ENCRYPTED_API = 6;
+  CAP_TAP_TO_TAG = 7;
+  CAP_RESTING_HR = 8;
+  CAP_APP_AUTH = 9;
+  CAP_BLE_MODE = 10;
+  CAP_REAL_STEPS = 11;
+  CAP_EXPERIMENTAL = 12;
+  CAP_CVA_PPG_SAMPLER = 13;
+  CAP_CHARGING_CONTROL = 14;
+  CAP_SENSITIVE_1 = 15;
+  CAP_AMBIENT_LIGHT = 16;
+  CAP_SENSITIVE_2 = 17;
+  CAP_RAW_DATA_SAMPLER = 18;
+}
+
+enum ChannelId {
+  TEMP_ACM = 0;
+  TEMP_CPU = 1;
+  TEMP_DIGITAL = 2;
+  ACM = 3;
+  PPG_AMBIENT = 4;
+  PPG_IR_LED1 = 5;
+  PPG_IR_LED2 = 6;
+  PPG_GREEN_LED1 = 7;
+  PPG_GREEN_LED2 = 8;
+  PPG_RED_LED1 = 9;
+  PPG_RED_LED2 = 10;
+  TEMP_NTC = 11;
+  CI_UNSPECIFIED = 255;
+}
+
+enum ChannelPdMask {
+  PD_NONE = 0;
+  CPM_PD1 = 1;
+  CPM_PD2 = 2;
+  CPM_PD1_PD2 = 3;
+  CPM_PD3 = 4;
+  CPM_PD1_PD3 = 5;
+  CPM_PD2_PD3 = 6;
+  CPM_PD1_PD2_PD3 = 7;
+}
+
+enum ChargingEndedReasons {
+  CHARGING_NOT_ENDED = 0;
+  CHARGING_DONE = 1;
+  CHARGING_INTERRUPTED_BY_USER = 2;
+  CHARGING_INTERRUPTED_BY_LOW_TEMP = 3;
+  CHARGING_INTERRUPTED_BY_HIGH_TEMP = 4;
+  CHARGER_REPORTED_FAULT_STATE = 5;
+  CHARGING_CAUSE_UNKNOWN = 6;
+}
+
+enum ClassificationMetric {
+  SNR = 0;
+  COUPLING_INDEX = 1;
+}
+
+enum ClockSource {
+  ST_CS_ILO = 0;
+  ST_CS_WCO = 1;
+  ST_CS_ALTLF = 2;
+  ST_CS_PILO = 3;
+  ST_CS_UNKNOWN = 255;
+}
+
+enum CyEnBleGapAdvAddrType {
+  CY_BLE_GAP_PUBLIC_ADDR_TYPE = 0;
+  CY_BLE_GAP_RANDOM_RESOLVABLE_ADDR_TYPE = 1;
+  CY_BLE_GAP_PUBLIC_IDENTITY_ADDR_TYPE = 2;
+  CY_BLE_GAP_RANDOM_IDENTITY_ADDR_TYPE = 3;
+}
+
+enum EFLASH_HWID {
+  EFLASH_HWID_UNKNOWN = 0;
+  EFLASH_HWID_GD25 = 1;
+  EFLASH_HWID_MX25 = 2;
+}
+
+enum EventCase {
+  EVENT_NOT_SET = 0;
+  RING_START_IND = 1;
+  TIME_SYNC_IND = 2;
+  DEBUG_EVENT_IND = 3;
+  SLEEP_PERIOD_INFO = 4;
+  MOTION_EVENT = 5;
+  BEDTIME_PERIOD = 6;
+  IBI_AND_AMPLITUDE_EVENT = 7;
+  SLEEP_ACM_PERIOD = 8;
+  SLEEP_TEMP_EVENT = 9;
+  TEMP_EVENT = 10;
+  HRV_EVENT = 11;
+  ALERT_EVENT = 12;
+  DEBUG_DATA_BATTERY_LEVEL_CHANGED = 13;
+  STATE_CHANGE_IND = 14;
+  REAL_STEPS_FEATURES = 15;
+  FEATURE_SESSION = 16;
+  RAW_PPG_DATA = 17;
+  WEAR_EVENT = 18;
+  ACTIVITY_INFO_EVENT = 19;
+  EHR_TRACE_EVENT = 20;
+  EHR_ACM_INTENSITY_EVENT = 21;
+  SLEEP_SUMMARY_1 = 22;
+  TEMP_PERIOD = 23;
+  DEBUG_DATA_BLE_USAGE_STATISTICS = 24;
+  DEBUG_DATA_BLE_MODE_SWITCH = 25;
+  DEBUG_DATA_HR_SETTINGS_DATA = 26;
+  DEBUG_DATA_SLEEP_STATISTICS = 27;
+  DEBUG_DATA_FLASH_USAGE_STATISTICS = 28;
+  DEBUG_DATA_PERIOD_INFO_STATISTICS = 29;
+  DEBUG_DATA_LEGACY_SECURITY_FAILURE = 30;
+  DEBUG_DATA_SECURITY_FAILURE = 31;
+  DEBUG_DATA_BACKGROUND_DFU_STATE = 32;
+  DEBUG_DATA_CHARGING_TIME = 33;
+  DEBUG_DATA_RAW_DATA_DUMP = 34;
+  DEBUG_DATA_FUEL_GAUGE_STATISTICS = 35;
+  DEBUG_DATA_FINGER_DETECTION = 36;
+  DEBUG_DATA_AFE_PPG_SETTINGS = 37;
+  DEBUG_DATA_BLE_MODULE_ERROR = 38;
+  DEBUG_DATA_BLE_PAIRING_COMPLETED = 39;
+  DEBUG_DATA_BOND_INFORMATION_REMOVED = 40;
+  DEBUG_DATA_EVENT_SYNC_STATISTICS = 41;
+  DEBUG_DATA_BOOT_LOADER_DEBUG_LOG = 42;
+  DEBUG_DATA_CRASH_DUMP = 43;
+  DEBUG_DATA_CRASH_DUMP_EVENT_QUEUE = 44;
+  DEBUG_DATA_FUEL_GAUGE_REGISTER_DUMP = 45;
+  DEBUG_DATA_RING_HW_INFORMATION = 46;
+  DEBUG_DATA_CHARGING_END_STATISTICS = 47;
+  DEBUG_DATA_FUEL_GAUGE_LOGGING_REGISTERS = 48;
+  DEBUG_DATA_BUFFER_WRAPPED = 49;
+  DEBUG_DATA_EVENT_SYNC_CACHE_STATISTICS = 50;
+  DEBUG_DATA_HARDWARE_TEST_START_VALUES = 51;
+  DEBUG_DATA_CHARGING_END_STATISTICS_CONTINUED = 52;
+  DEBUG_DATA_AFE_STATISTICS_VALUES = 53;
+  DEBUG_DATA_ACM_CONFIGURATION_CHANGED = 54;
+  DEBUG_DATA_STACK_USAGE_STATISTICS = 55;
+  DEBUG_DATA_FIELD_TEST_MCU_PIN_CONFIG_INFO_0 = 56;
+  DEBUG_DATA_FIELD_TEST_MCU_PIN_CONFIG_INFO_1 = 57;
+  DEBUG_DATA_HARDWARE_TEST_PIN_ADC_CHECK_DATA = 58;
+  DEBUG_DATA_HARDWARE_TEST_ADJACENT_PIN_ADC_CHECK_DATA = 59;
+  DEBUG_DATA_RING_ROTATION_INDEX_CONTRIBUTOR = 60;
+  DEBUG_DATA_HARDWARE_TEST_BATTERY_DCIR_TEST_DATA1 = 61;
+  DEBUG_DATA_HARDWARE_TEST_BATTERY_DCIR_TEST_DATA2 = 62;
+  DEBUG_DATA_PPG_SIGNAL_QUALITY_STATS = 63;
+  DEBUG_DATA_CHARGER_FIRMWARE_AND_PSN = 64;
+  SPO2_EVENT = 65;
+  PPG_AMPLITUDE_IND = 66;
+  MEAS_QUALITY_EVENT = 67;
+  BLE_CONNECTION_IND_CONNECTED = 68;
+  BLE_CONNECTION_IND_CONNECTED_EXTENDED = 69;
+  BLE_CONNECTION_IND_DISCONNECTED = 70;
+  BLE_CONNECTION_IND_DISCONNECTED_EXTENDED = 71;
+  BLE_CONNECTION_IND_DISCONNECTED_EXTENDED2 = 72;
+  BLE_CONNECTION_IND_DISCONNECTED_EXTENDED_LINK_QUALITY = 73;
+  SELFTEST_EVENT = 74;
+  GREEN_IBI_QUALITY_EVENT = 75;
+  DEBUG_DATA_OPEN_AFE_PPG_SETTINGS_DATA = 76;
+  DEBUG_DATA_FIELD_TEST_INFORMATION1 = 77;
+  DEBUG_DATA_FIELD_TEST_INFORMATION2 = 78;
+  DEBUG_DATA_FIELD_TEST_INFORMATION3 = 79;
+  DEBUG_DATA_FIELD_TEST_INFORMATION4 = 80;
+  DEBUG_DATA_HARDWARE_TEST_RESULT_VALUES = 81;
+  SLEEP_SUMMARY_2 = 82;
+  SLEEP_SUMMARY_3 = 83;
+  SLEEP_SUMMARY_4 = 84;
+  SLEEP_PHASE_DETAILS = 85;
+  SLEEP_PHASE_DATA = 86;
+  SELFTEST_DATA_EVENT = 87;
+  SPO2_IBI_AND_AMPLITUDE_EVENT = 88;
+  MOTION_PERIOD = 89;
+  RAW_PPG_SUMMARY = 90;
+  DEBUG_DATA_CHARGER_LINK_PARAMS = 91;
+  DEBUG_DATA_CHARGER_SELF_TEST_RESULTS = 92;
+  GREEN_IBI_AND_AMP_EVENT = 93;
+  CVA_RAW_PPG_DATA = 94;
+  SCAN_START = 95;
+  SCAN_END = 96;
+  ON_DEMAND_SESSION = 97;
+  SPO2_DC_EVENT = 98;
+  ON_DEMAND_MEAS = 99;
+  OLD_RAW_PPG_DATA = 100;
+  ON_DEMAND_MOTION = 101;
+  SPO2_STABLE_EVENT = 102;
+  SPO2_COMBO_DATA = 103;
+  AMBIENT_EVENT = 104;
+  DEBUG_DATA_RAW_RING_BATTERY_VOLTAGE = 105;
+  DEBUG_DATA_DATA_RELIABILITY_INDEX = 106;
+  DEBUG_DATA_HARDWARE_TEST_EXTERNAL_CLOCK_MEASUREMENT_DATA = 107;
+  TIME_SYNC_IND_SKIPPED = 108;
+  EDIT_BEDTIME = 1001;
+}
+
+enum EventQueueType {
+  EVENT_QUEUE_CMOP = 0;
+  EVENT_QUEUE_CM4 = 1;
+}
+
+enum FuelGaugeDumpTypes {
+  LOADED_FROM_STORAGE = 0;
+  REGISTERS_STORED = 1;
+}
+
+enum GyroscopeRange {
+  GYRO_RANGE_OFF = 0;
+  GYRO_RANGE_15_625_DPS = 1;
+  GYRO_RANGE_31_25_DPS = 2;
+  GYRO_RANGE_62_5_DPS = 3;
+  GYRO_RANGE_125_DPS = 4;
+  GYRO_RANGE_250_DPS = 5;
+  GYRO_RANGE_500_DPS = 6;
+  GYRO_RANGE_1000_DPS = 7;
+  GYRO_RANGE_2000_DPS = 8;
+}
+
+enum IntervalType {
+  IT_PERIODIC = 0;
+  DCIR = 1;
+  MEDIAN_FILTER_RESET = 2;
+  INTERVAL_TYPE_UNSPECIFIED = 3;
+}
+
+enum MEAS_TINT {
+  INTEGRATION_14_6_US = 0;
+  INTEGRATION_29_2_US = 1;
+  INTEGRATION_58_6_US = 2;
+  INTEGRATION_117_US = 3;
+}
+
+enum MotionPeriodEventTypes {
+  NORMAL = 0;
+  HISTORY = 1;
+}
+
+enum MotionState {
+  NO_MOTION = 0;
+  RESTLESS = 1;
+  TOSSING_AND_TURNING = 2;
+  ACTIVE = 3;
+}
+
+enum ODR {
+  ODR_OFF = 0;
+  ODR_0_78_HZ = 1;
+  ODR_1_56_HZ = 2;
+  ODR_3_12_HZ = 3;
+  ODR_6_25_HZ = 4;
+  ODR_12_5_HZ = 5;
+  ODR_25_HZ = 6;
+  ODR_50_HZ = 7;
+  ODR_100_HZ = 8;
+  ODR_200_HZ = 9;
+  ODR_400_500_HZ = 10;
+  ODR_800_1000_HZ = 11;
+  ODR_1600_2000_HZ = 12;
+  ODR_3200_4000_HZ = 13;
+}
+
+enum PPGChannelPDMask {
+  PPGCPDM_PD1 = 0;
+  PPGCPDM_PD2 = 1;
+  PPGCPDM_PD1_PD2 = 2;
+  PPGCPDM_PD3 = 3;
+  PPGCPDM_PD1_PD3 = 4;
+  PPGCPDM_PD2_PD3 = 5;
+  PPGCPDM_PD1_PD2_PD3 = 6;
+}
+
+enum PinStatus {
+  OK = 0;
+  STUCK_LOW = 1;
+  STUCK_HIGH = 2;
+  FLOATING = 3;
+  NA = 4;
+}
+
+enum RdataFeatureId {
+  RDATA_FEATURE_NONE = 0;
+  RDATA_FEATURE_RESTING_HR = 1;
+  RDATA_FEATURE_ON_DEMAND = 2;
+  RDATA_FEATURE_DHR = 3;
+  RDATA_FEATURE_WHR = 4;
+  RDATA_FEATURE_SPO2 = 5;
+  RDATA_FEATURE_FDET = 6;
+  RDATA_FEATURE_DYSE = 7;
+  RDATA_FEATURE_CVA = 8;
+  RDATA_FEATURE_RDATA = 9;
+  RDATA_FEATURE_DATA_RELIABILITY_INDEX = 10;
+  RDATA_FEATURE_TAP2TAG = 11;
+  RDATA_FEATURE_REAL_STEPS = 12;
+  RDATA_FEATURE_FLIP2FACTORY = 13;
+}
+
+enum SecurityFailureType {
+  UNKNOWN_MESSAGE = 0;
+  INCORRECT_MESSAGE_LEGNTH = 1;
+  NEW_CONNECTION_IDLE_TIMEOUT = 2;
+  NOTIFICATION_TIMEOUT = 3;
+  NON_BOND_CONNECTION = 4;
+  SECURITY_ESTABLISHMENT_FAILURE = 5;
+}
+
+enum SelectionCriteria {
+  UNKNOWN_QUALITY = 0;
+  BEST_IBI_QUALITY = 1;
+  WORST_IBI_QUALITY = 2;
+}
+
+enum SelfTestStatus {
+  STS_ST_DET_OK = 0;
+  STS_ST_DET_NOTRUN = 1;
+  STS_ST_DET_ERROR_NOT_IMPLEMENTED = 2;
+  STS_ST_DET_ERROR_BUSY = 3;
+  STS_ST_DET_ERROR_PARAMETER = 4;
+  ST_DET_ERROR_IND_COMM_RX = 5;
+  ST_DET_ERROR_IND_COMM_TX = 6;
+  ST_DET_ERROR_USB_VOLTAGE = 7;
+  ST_DET_ERROR_USB_VOLTAGE_2 = 8;
+  ST_DET_ERROR_COIL_CONTROL_GPIO = 9;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_1 = 10;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_2 = 11;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_3 = 12;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_4 = 13;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_5 = 14;
+  ST_DET_ERROR_USB_OVP_ACTIVE = 15;
+  STS_ST_DET_ERROR_VDD_SUPPLY = 16;
+  STS_ST_DET_ERROR_VDD_SUPPLY_BREAK = 17;
+  ST_DET_ERROR_COIL_CONTROL_LIMIT_6 = 18;
+}
+
+enum SelftestDetailedId {
+  SDI_ST_DET_OK = 0;
+  SDI_ST_DET_NOTRUN = 1;
+  SDI_ST_DET_ERROR_NOT_IMPLEMENTED = 2;
+  SDI_ST_DET_ERROR_BUSY = 3;
+  SDI_ST_DET_ERROR_PARAMETER = 4;
+  ST_DET_ERROR_COMMUNICATION = 5;
+  ST_DET_ERROR_ID_CHECK = 6;
+  ST_DET_ERROR_LIMIT1 = 7;
+  ST_DET_ERROR_LIMIT2 = 8;
+  ST_DET_ERROR_LIMIT3 = 9;
+  ST_DET_ERROR_ACM_INT1 = 10;
+  ST_DET_ERROR_ACM_X = 11;
+  ST_DET_ERROR_ACM_Y = 12;
+  ST_DET_ERROR_ACM_Z = 13;
+  ST_DET_ERROR_ACM_TEMP = 14;
+  ST_DET_ERROR_ACM_VBAT = 15;
+  ST_DET_ERROR_ACM_GYRO = 16;
+  ST_DET_ERROR_BQ_ID = 17;
+  ST_DET_ERROR_BQ_PG = 18;
+  ST_DET_ERROR_BQ_INT = 19;
+  ST_DET_ERROR_BQ_CD = 20;
+  ST_DET_ERROR_INTERNAL = 21;
+  ST_DET_ERROR_BQ_CHARGING = 22;
+  ST_DET_ERROR_IR_LED1_A = 23;
+  ST_DET_ERROR_IR_LED1_B = 24;
+  ST_DET_ERROR_IR_LED1_C = 25;
+  ST_DET_ERROR_IR_LED2_A = 26;
+  ST_DET_ERROR_IR_LED2_B = 27;
+  ST_DET_ERROR_IR_LED2_C = 28;
+  ST_DET_ERROR_PTR = 29;
+  ST_DET_ERROR_DIGIPOT_PTR = 30;
+  ST_DET_ERROR_DIGIPOT_EDA = 31;
+  ST_DET_ERROR_DIGIPOT_DC_OFFSET = 32;
+  ST_DET_ERROR_LDO_OFF = 33;
+  ST_DET_ERROR_LDO_ON = 34;
+  ST_DET_ERROR_ADC = 35;
+  ST_DET_ERROR_GAIN12 = 36;
+  ST_DET_ERROR_GAIN3PTR = 37;
+  ST_DET_ERROR_GAIN45 = 38;
+  ST_DET_ERROR_GAIN56 = 39;
+  ST_DET_ERROR_EDA = 40;
+  ST_DET_ERROR_VBAT_DISCONNECTED = 41;
+  ST_DET_ERROR_GAIN32 = 42;
+  ST_DET_ERROR_GAIN1PTR = 43;
+  ST_DET_ERROR_PTR_AMBIENT = 44;
+  ST_DET_ERROR_NTC = 45;
+  ST_DET_ERROR_CAPS_GLOBAL_CRC = 46;
+  ST_DET_ERROR_CAPS_WIDGET_CRC = 47;
+  ST_DET_ERROR_CAPS_BL_DUPL = 48;
+  ST_DET_ERROR_CAPS_BL_OUTOFRANGE = 49;
+  ST_DET_ERROR_CAPS_SHORT = 50;
+  ST_DET_ERROR_CAPS_SHORT2 = 51;
+  ST_DET_ERROR_CAPS_SHORT3 = 52;
+  ST_DET_ERROR_CAPS_CAPASITANCE = 53;
+  ST_DET_ERROR_CAPS_EXTCAPASITANCE = 54;
+  ST_DET_ERROR_CAPS_VDDA = 55;
+  ST_DET_ERROR_CAPS_UNKNOWN = 56;
+  ST_DET_ERROR_LIMIT4 = 57;
+  ST_DET_ERROR_LIMIT5 = 58;
+  ST_DET_ERROR_LIMIT6 = 59;
+  ST_DET_ERROR_LIMIT7 = 60;
+  ST_DET_ERROR_VBAT_MEAS = 61;
+  ST_DET_ERROR_AFE_SYSTEM = 62;
+  ST_DET_ERROR_IR_PD1 = 63;
+  ST_DET_ERROR_IR_PD2 = 64;
+  ST_DET_ERROR_RED_PD1 = 65;
+  ST_DET_ERROR_RED_PD2 = 66;
+  ST_DET_ERROR_GREEN1_PD1 = 67;
+  ST_DET_ERROR_GREEN1_PD2 = 68;
+  ST_DET_ERROR_GREEN2_PD1 = 69;
+  ST_DET_ERROR_GREEN2_PD2 = 70;
+  ST_DET_ERROR_BB_VOLTAGE_NOT_SET = 71;
+  ST_DET_ERROR_FUEL_GAUGE_ALERT = 72;
+  ST_DET_ERROR_VBAT_VOLTAGE = 73;
+  ST_DET_ERROR_FDET_PD1 = 74;
+  ST_DET_ERROR_FDET_PD2 = 75;
+  SDI_ST_DET_ERROR_VDD_SUPPLY = 76;
+  SDI_ST_DET_ERROR_VDD_SUPPLY_BREAK = 77;
+  ST_DET_ERROR_AFE_EXP_OVERFLOW = 78;
+  ST_DET_ERROR_AFE_IR_COMMUNICATION = 79;
+  ST_DET_ERROR_AFE_DARK = 80;
+  ST_DET_ERROR_AFE_ALC_OVERFLOW = 81;
+  ST_DET_ERROR_AFE_P_FENCE = 82;
+  ST_DET_ERROR_AFE_INVALID_DATA = 83;
+  ST_DET_ERROR_AFE_NO_DATA = 84;
+  ST_DET_ERROR_AFE_INT1 = 85;
+  ST_DET_ERROR_AFE_INT2 = 86;
+  ST_DET_ERROR_NTC1_CROSSCHECK = 87;
+  ST_DET_ERROR_NTC2_CROSSCHECK = 88;
+  ST_DET_ERROR_NTC3_CROSSCHECK = 89;
+  ST_DET_ERROR_NTC4_CROSSCHECK = 90;
+  ST_DET_ERROR_IR3_PD1 = 91;
+  ST_DET_ERROR_IR3_PD2 = 92;
+  ST_DET_ERROR_RED2_PD1 = 93;
+  ST_DET_ERROR_RED2_PD2 = 94;
+  ST_DET_ERROR_RED3_PD1 = 95;
+  ST_DET_ERROR_RED3_PD2 = 96;
+  ST_DET_ERROR_GREEN1_PD3 = 97;
+  ST_DET_ERROR_GREEN2_PD3 = 98;
+  ST_DET_ERROR_IR_PD3 = 99;
+  ST_DET_ERROR_RED_PD3 = 100;
+  ST_DET_ERROR_RED2_PD3 = 101;
+  ST_DET_ERROR_IR2_PD1 = 102;
+  ST_DET_ERROR_IR2_PD2 = 103;
+  ST_DET_ERROR_IR2_PD3 = 104;
+  ST_DET_ERROR_GREEN1_PD4 = 105;
+  ST_DET_ERROR_GREEN2_PD4 = 106;
+  ST_DET_ERROR_IR_PD4 = 107;
+  ST_DET_ERROR_RED_PD4 = 108;
+  ST_DET_ERROR_RED2_PD4 = 109;
+  ST_DET_ERROR_IR2_PD4 = 110;
+  ST_DET_ERROR_PMIC_FG_LSW_OFF = 117;
+  ST_DET_ERROR_CHARGING_CURRENT_HIGH = 118;
+  ST_DET_ERROR_CHARGING_CURRENT_LOW = 119;
+  ST_DET_ERROR_CHARGER_FAULTY = 120;
+  ST_DET_ERROR_IVMON_ADC_FAILURE = 121;
+  ST_DET_ERROR_IVMON_GAUGE_FAILURE = 122;
+  ST_DET_ERROR_IVMON_PMIC_FAILURE = 123;
+  ST_DET_ERROR_IVMON_LIMIT_GAUGE_IBAT = 124;
+  ST_DET_ERROR_IVMON_LIMIT_GAUGE_VBAT = 125;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_IBAT = 126;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VBAT = 127;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VSYS = 128;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VREG = 129;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VANA = 130;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VLED = 131;
+  ST_DET_ERROR_IVMON_LIMIT_PMIC_VISET = 132;
+  ST_DET_ERROR_PMIC_CHG_TEMP_SUSPEND = 133;
+  ST_DET_ERROR_IVMON_CHG_MODE_CHANGE = 134;
+  ST_DET_ERROR_IVMON_IN_CHG_CHANGE = 135;
+  ST_DET_ERROR_ACM_INT2 = 136;
+  ST_DET_ERROR_PMIC_VCHARGER_LOW = 137;
+  ST_DET_ERROR_PMIC_VCHARGER_HIGH = 138;
+  ST_DET_ERROR_PMIC_MPC0 = 139;
+  ST_DET_ERROR_PMIC_MPC1 = 140;
+  ST_DET_ERROR_PMIC_VLED_LOW = 141;
+  ST_DET_ERROR_PMIC_VLED_HIGH = 142;
+}
+
+enum SelftestId {
+  ST_ACM = 0;
+  ST_PMIC = 1;
+  ST_SERIAL_FLASH = 2;
+  ST_IR_PULSE = 3;
+  ST_DIGIPOT_PTR = 4;
+  ST_PHOTOTRANSISTOR = 5;
+  ST_EDA_DC_REF_AND_DC_OFFSET = 6;
+  ST_EDA = 7;
+  ST_VBAT = 8;
+  ST_NTC = 9;
+  ST_CAPSENSE = 10;
+  ST_SERIAL_FLASH2 = 11;
+  ST_NTC2 = 12;
+  ST_PHOTOTRANSISTOR2 = 13;
+  ST_TEMP = 14;
+  ST_AFE = 15;
+  ST_BB = 16;
+  ST_NTC3 = 17;
+  ST_NTC4 = 18;
+  ST_FG = 19;
+  ST_SUPPLY = 20;
+  ST_TEMP2 = 21;
+  ST_NTC_CROSSCHECK = 22;
+  ST_IND_COMM = 23;
+  ST_IVMON = 24;
+  ST_TEMPERATURE_CROSSCHECK = 25;
+  ST_CLOCK = 26;
+  ST_AMOUNT_OF_TESTS = 27;
+}
+
+enum SelftestResult {
+  ST_PASSED = 0;
+  ST_FAILED = 1;
+  ST_PENDING = 255;
+}
+
+enum SessionStatus {
+  SESSION_START_BY_USER = 0;
+  SESSION_START_BY_SYSTEM = 1;
+  SESSION_END_USER_REQUEST = 2;
+  SESSION_END_NORMAL_MEASUREMENT_PERIOD_END = 3;
+  SESSION_END_TOO_MUCH_MOVEMENT = 4;
+  SESSION_END_TOO_LOW_BATTERY = 5;
+  SESSION_END_FIRMWARE_UPDATE = 6;
+  SESSION_END_UNEXPECTED_ERROR = 7;
+  SESSION_END_RING_CHARGING = 8;
+  SESSION_END_RESTING_HR_DETECTION = 9;
+  SESSION_END_DUE_TO_NO_MOVEMENT = 10;
+  SESSION_END_DUE_TO_RING_NOT_IN_FINGER = 11;
+  SESSION_START_BY_RING_AWHR_FEATURE = 12;
+  SESSION_STATUS_TYPE_COUNT = 13;
+}
+
+enum SkipReason {
+  UNKNOWN = 0;
+  PPG_MEAS_ENABLED = 1;
+}
+
+enum SleepPhase_OSSAv1 {
+  DEEP_SLEEP = 0;
+  LIGHT_SLEEP = 1;
+  REM_SLEEP = 2;
+  AWAKE = 3;
+}
+
+enum StateChange {
+  STATE_UNSPECIFIED = 0;
+  STATE_NOT_IN_FINGER = 1;
+  STATE_FINGER_DETECTION = 2;
+  STATE_FINGER_USER_ACTIVE = 3;
+  STATE_FINGER_USER_IN_REST = 4;
+  STATE_FINGER_HR_USER_ACTIVE = 5;
+  STATE_FINGER_HR_USER_IN_REST = 6;
+  STATE_OUT_OF_POWER = 7;
+  STATE_CHARGING_PHASE = 8;
+  STATE_RING_HIBERNATE_LOW_POWER = 9;
+  STATE_PRODUCTION_DIAGNOSTIC = 20;
+  STATE_PRODUCTION_TESTING = 21;
+  STATE_PRODUCTION_TESTING_CHARGING = 22;
+  STATE_HW_TEST = 30;
+}
+
+enum Subtype {
+  ON_DEMAND_SESSION_START = 0;
+  ON_DEMAND_SESSION_END_APP_REQUEST = 1;
+  ON_DEMAND_SESSION_END_TIMEOUT = 2;
+  ON_DEMAND_SESSION_END_LOW_BATTERY = 3;
+  ON_DEMAND_SESSION_END_UNEXPECTED_ERROR = 4;
+  SUBT_UNSPECIFIED = 255;
+}
+
+enum SuccessCode {
+  SUCCESSFUL = 0;
+  SATURATION = 1;
+  SC_PERIODIC = 2;
+  MOTION_ABORT = 3;
+  FEATURE_ENABLED = 4;
+  SC_FEATURE_DISABLED = 5;
+  SC_FEATURE_REQUESTED = 6;
+  GLOBAL_MEASUREMENT_DISABLED = 7;
+}
+
+enum TriggerReason {
+  NO_REASON = 0;
+  DC_LEVEL_TOO_CLOSE_TO_SATURATION = 1;
+  TOO_LONG_FROM_LAST_SCAN = 2;
+  LONG_MOTION_HAS_ENDED = 3;
+  START_OF_MEASUREMENT = 4;
+  TR_FEATURE_DISABLED = 5;
+  TR_FEATURE_REQUESTED = 6;
+}
+
+enum TypeCase {
+  TYPE_NOT_SET = 0;
+  PMIC = 1;
+  AFE = 2;
+  TEMP_CROSSCHECK = 3;
+  CLOCK = 4;
+  EMPTY = 5;
+}
+
+enum ValidArgumentCount {
+  NO_ARGUMENTS = 0;
+  ONE_ARGUMENT = 1;
+  TWO_ARGUMENTS = 2;
+}
+
+message ActivityInfoEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 step_count = 2;
+  repeated float met_level1 = 3;
+  repeated float met_level2 = 4;
+  repeated float met_level3 = 5;
+  repeated float met_level4 = 6;
+  repeated float met_level5 = 7;
+  repeated float met_level6 = 8;
+  repeated float met_level7 = 9;
+  repeated float met_level8 = 10;
+  repeated float met_level9 = 11;
+  repeated float met_level10 = 12;
+  repeated float met_level11 = 13;
+  repeated float met_level12 = 14;
+  repeated float met_level13 = 15;
+}
+
+message AddActivity {
+  int64 timestamp_ms_activity_start = 1;
+  int64 timestamp_ms_activity_end = 2;
+  int32 origin = 3;
+  bytes activity_uuid = 4;
+  int32 activity_type = 5;
+  int32 intensity = 6;
+  bytes label = 7;
+  int32 active_energy = 8;
+  int32 total_distance = 9;
+  int32 swimming_stroke_count = 10;
+  bytes healthkit_source_info = 11;
+}
+
+message AlertEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 alert_type = 2;
+}
+
+message AmbientEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 value = 2;
+}
+
+message BedtimePeriod {
+  repeated int64 timestamp = 1;
+  repeated int64 bedtime_start = 2;
+  repeated int64 bedtime_end = 3;
+  repeated int32 start_timezone_seconds = 4;
+  repeated int32 end_timezone_seconds = 5;
+}
+
+message BleConnectionIndConnected {
+  repeated int64 timestamp = 1;
+  repeated int32 peer_addr_type = 2;
+  repeated bytes peer_addr = 3;
+}
+
+message BleConnectionIndConnectedExtended {
+  repeated int64 timestamp = 1;
+  repeated int32 peer_addr_type = 2;
+  repeated bytes peer_addr = 3;
+  repeated int32 connection_handle = 4;
+  repeated bool non_bonded_connection_allowed = 5;
+}
+
+message BleConnectionIndDisconnected {
+  repeated int64 timestamp = 1;
+  repeated int32 average_rssi = 2;
+  repeated int32 min_rssi = 3;
+  repeated int32 max_rssi = 4;
+  repeated int32 sample_count = 5;
+  repeated int32 seconds_in_foreground_mode = 6;
+  repeated int32 seconds_in_background_mode = 7;
+}
+
+message BleConnectionIndDisconnectedExtended {
+  repeated int64 timestamp = 1;
+  repeated int32 average_rssi = 2;
+  repeated int32 seconds_in_foreground_mode = 3;
+  repeated int32 seconds_in_background_mode = 4;
+  repeated int32 disconnect_reason = 5;
+  repeated int32 info_bitfield = 6;
+  repeated bool info_bitfield_b0_event_sync_in_progress = 7;
+  repeated bool info_bitfield_b1_tx_phy = 8;
+  repeated bool info_bitfield_b2_rx_phy = 9;
+  repeated bool info_bitfield_b3_link_encrypted = 10;
+  repeated bool info_bitfield_b4_ble_mode = 11;
+  repeated int32 parameter_update_state = 12;
+  repeated int32 time_last_parameter_update = 13;
+}
+
+message BleConnectionIndDisconnectedExtended2 {
+  repeated int64 timestamp = 1;
+  repeated int32 tx_packet_size = 2;
+  repeated int32 rx_packet_size = 3;
+  repeated int32 tx_byte_count = 4;
+  repeated int32 rx_byte_count = 5;
+}
+
+message BleConnectionIndDisconnectedExtendedLinkQuality {
+  repeated int64 timestamp = 1;
+  repeated int32 connection_event_count = 2;
+  repeated int32 crc_error = 3;
+  repeated int32 retransmissions = 4;
+  repeated int32 missed_connection_events = 5;
+}
+
+message CorruptionLogEntry {
+  int32 corruption_start_offset = 1;
+  int32 corruption_end_offset = 2;
+}
+
+message CvaRawPpgData {
+  int64 timestamp = 1;
+  int64 feature_session_start_time_ms = 2;
+  repeated int32 sample_values = 3;
+}
+
+message DebugDataAcmConfigurationChanged {
+  repeated int64 timestamp = 1;
+  repeated int32 accelerometer_mode = 2;
+  repeated int32 accelerometer_odr = 3;
+  repeated int32 accelerometer_range = 4;
+  repeated int32 gyroscope_odr = 5;
+  repeated int32 gyroscope_range = 6;
+  repeated int32 accelerator_enabled_event_mask = 7;
+  repeated int32 requested_fifo_sample_depth = 8;
+}
+
+message DebugDataAfePpgSettings {
+  repeated int64 timestamp = 1;
+  repeated int32 ppg_parameter_struct_size = 2;
+  repeated int32 first_ppg_parameters = 3;
+  repeated int32 second_ppg_parameters = 4;
+  repeated int32 third_ppg_parameters = 5;
+}
+
+message DebugDataAfeStatisticsValues {
+  repeated int64 timestamp = 1;
+  repeated int32 total_measurement_count = 2;
+  repeated int32 led_0_measurement_count = 3;
+  repeated int32 led_1_measurement_count = 4;
+  repeated int32 led_2_measurement_count = 5;
+  repeated int32 led_3_measurement_count = 6;
+  repeated int32 led_4_measurement_count = 7;
+  repeated int32 led_5_measurement_count = 8;
+  repeated int32 led_6_measurement_count = 9;
+  repeated int32 led_7_measurement_count = 10;
+  repeated int32 led_8_measurement_count = 11;
+  repeated int32 led_9_measurement_count = 12;
+  repeated int32 led_10_measurement_count = 13;
+}
+
+message DebugDataBackgroundDFUState {
+  repeated int64 timestamp = 1;
+  repeated int32 dfu_state = 2;
+}
+
+message DebugDataBatteryLevelChanged {
+  repeated int64 timestamp = 1;
+  repeated int32 battery_level = 2;
+  repeated int32 battery_voltage = 3;
+  repeated bool in_charger = 4;
+  repeated bool charging = 5;
+}
+
+message DebugDataBleModeSwitch {
+  repeated int64 timestamp = 1;
+  repeated int32 ble_mode = 2;
+  repeated int32 state = 3;
+}
+
+message DebugDataBleModuleError {
+  repeated int64 timestamp = 1;
+  repeated int32 module_id = 2;
+  repeated int32 line_number = 3;
+  repeated int32 error_code = 4;
+}
+
+message DebugDataBlePairingCompleted {
+  repeated int64 timestamp = 1;
+  repeated int32 bonding_handle = 2;
+  repeated int32 error_code = 3;
+  repeated int32 bonded = 4;
+}
+
+message DebugDataBleUsageStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 ticks_fast_mode = 2;
+  repeated int32 ticks_slow_mode = 3;
+  repeated int32 ticks_advertising_mode = 4;
+}
+
+message DebugDataBondInformationRemoved {
+  repeated int64 timestamp = 1;
+  repeated int32 connection_handle = 2;
+  repeated int32 handle_to_keep = 3;
+  repeated int32 handle_to_remove = 4;
+  repeated int32 number_of_devices = 5;
+  repeated int32 error_code = 6;
+}
+
+message DebugDataBootLoaderDebugLog {
+  repeated int64 timestamp = 1;
+  repeated int32 line_number = 2;
+  repeated int32 message_type = 3;
+  repeated int32 return_value = 4;
+}
+
+message DebugDataBufferWrapped {
+  repeated int64 timestamp = 1;
+  repeated int32 buffer_id = 2;
+  repeated int32 oldest_timestamp = 3;
+}
+
+message DebugDataChargerFirmwareAndPSN {
+  repeated int64 timestamp = 1;
+  repeated int32 charger_fw_major = 2;
+  repeated int32 charger_fw_minor = 3;
+  repeated int32 charger_fw_patch = 4;
+  repeated bytes psn = 5;
+}
+
+message DebugDataChargerLinkParams {
+  int32 min_mv = 1;
+  int32 max_mv = 2;
+  int32 avg_mv = 3;
+  int32 boost_level = 4;
+  int32 fg_current = 5;
+}
+
+message DebugDataChargingEndStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 charging_event_durations = 2;
+  repeated int32 estimated_time_in_cc_phage_in_seconds = 3;
+  repeated int32 battery_capasity_percentage_start = 4;
+  repeated int32 battery_capasity_percentage_end = 5;
+  repeated int32 battery_voltage_start_in_mv = 6;
+  repeated int32 battery_voltage_end_in_mv = 7;
+  repeated int32 charging_ended_reason = 8;
+}
+
+message DebugDataChargingEndStatisticsContinued {
+  repeated int64 timestamp = 1;
+  repeated int32 max_battery_voltage = 2;
+  repeated int32 temp_before_charging = 3;
+  repeated int32 max_temp_during_charging = 4;
+  repeated int32 slope_meas_voltage_start = 5;
+  repeated int32 slope_meas_voltage_end = 6;
+  repeated int32 slope_meas_duration = 7;
+}
+
+message DebugDataChargingTime {
+  repeated int64 timestamp = 1;
+  repeated int32 charging_time_ms = 2;
+}
+
+message DebugDataCrashDump {
+  repeated int64 timestamp = 1;
+  repeated int32 assert_source = 2;
+  repeated int32 line_number = 3;
+  repeated bytes message = 4;
+}
+
+message DebugDataCrashDumpEventQueue {
+  repeated int64 timestamp = 1;
+  repeated int32 queue_type = 2;
+  repeated int32 number_of_free_slots = 3;
+  repeated int32 event_id = 4;
+  repeated int32 number_of_events = 5;
+}
+
+message DebugDataDataReliabilityIndex {
+  repeated int64 timestamp = 1;
+  repeated int32 ir_first_value = 2;
+  repeated int32 ir_second_value = 3;
+  repeated int32 red_first_value = 4;
+  repeated int32 red_second_value = 5;
+  repeated int32 green_first_value = 6;
+  repeated int32 green_second_value = 7;
+}
+
+message DebugDataEventSyncCacheStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 header_read_count_from_cache = 2;
+  repeated int32 header_read_count_from_flash = 3;
+  repeated int32 event_read_count_from_cache = 4;
+  repeated int32 event_read_count_from_flash = 5;
+}
+
+message DebugDataEventSyncStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 connection_interval = 2;
+  repeated int32 synced_bytes_count = 3;
+  repeated int32 sync_duration_in_ms = 4;
+  repeated int32 mtu = 5;
+}
+
+message DebugDataFieldTestInformation1 {
+  repeated int64 timestamp = 1;
+  repeated int32 number_of_hw_tests = 2;
+}
+
+message DebugDataFieldTestInformation2 {
+  repeated int64 timestamp = 1;
+  repeated int32 test_index = 2;
+  repeated int32 hw_test_identifier = 3;
+}
+
+message DebugDataFieldTestInformation3 {
+  repeated int64 timestamp = 1;
+  repeated int32 test_index = 2;
+  repeated int32 hw_test_identifier = 3;
+  repeated int32 hw_test_result_code = 4;
+}
+
+message DebugDataFieldTestInformation4 {
+  repeated int64 timestamp = 1;
+  repeated int32 number_of_tests_ran = 2;
+  repeated int32 last_hw_result_code = 3;
+}
+
+message DebugDataFieldTestMcuPinConfigInfo0 {
+  repeated int64 timestamp = 1;
+  repeated int32 port = 2;
+  repeated int32 info_type = 3;
+  repeated int32 gpio_output_buffer_drive_mode = 4;
+  repeated int32 gpio_input_buffer_voltage_threshold = 5;
+  repeated int32 gpio_output_buffer_slewrate_and_drive_strength = 6;
+}
+
+message DebugDataFieldTestMcuPinConfigInfo1 {
+  repeated int64 timestamp = 1;
+  repeated int32 port = 2;
+  repeated int32 info_type = 3;
+  repeated int32 port_sio_configuration = 4;
+  repeated int32 port_interrupt_edge_trigger_and_filter_configuration = 5;
+  repeated int32 port_masked_interrupt_status = 6;
+}
+
+message DebugDataFingerDetection {
+  repeated int64 timestamp = 1;
+  repeated int32 average_ir_led2 = 2;
+  repeated int32 minimum_ir_led2 = 3;
+  repeated int32 maximum_ir_led2 = 4;
+  repeated int32 measurement_count = 5;
+}
+
+message DebugDataFlashUsageStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 ticks_reading_flash = 2;
+  repeated int32 ticks_writing_flash = 3;
+  repeated int32 ticks_erasing_flash = 4;
+}
+
+message DebugDataFuelGaugeLoggingRegisters {
+  repeated int64 timestamp = 1;
+  repeated int32 cycles_register = 2;
+  repeated int32 full_cap_rep_register = 3;
+  repeated int32 full_cap_nom_register = 4;
+  repeated int32 learncfg_register = 5;
+  repeated int32 vf_soc_register = 6;
+}
+
+message DebugDataFuelGaugeRegisterDump {
+  repeated int64 timestamp = 1;
+  repeated int32 dump_type = 2;
+  repeated int32 is_valid = 3;
+  repeated int32 struct_version = 4;
+  repeated int32 reg_r_combo = 5;
+  repeated int32 reg_temp_co = 6;
+  repeated int32 reg_full_cap_rep = 7;
+  repeated int32 reg_cycles = 8;
+  repeated int32 reg_full_cap_num = 9;
+}
+
+message DebugDataFuelGaugeStatistics {
+  repeated int64 timestamp = 1;
+  repeated float battery_percentage = 2;
+  repeated int32 average_battery_voltage = 3;
+  repeated int32 average_current_consumption = 4;
+  repeated int32 remaining_capacity = 5;
+  repeated int32 coulomb_counter = 6;
+}
+
+message DebugDataHardwareTestAdjacentPinAdcCheckData {
+  repeated int64 timestamp = 1;
+  repeated int32 input_port_number = 2;
+  repeated int32 input_pin_number = 3;
+  repeated int32 output_port_number = 4;
+  repeated int32 output_pin_number = 5;
+  repeated int32 test_adc_results_in_mv = 6;
+}
+
+message DebugDataHardwareTestBatteryDcirTestData1 {
+  repeated int64 timestamp = 1;
+  repeated int32 battery_dcir_resistance = 2;
+  repeated int32 measured_battery_voltage_mv_v1 = 3;
+  repeated int32 measured_battery_voltage_mv_v2 = 4;
+  repeated int32 measured_battery_voltage_mv_v3 = 5;
+  repeated int32 estimator_l2_current_ma = 6;
+  repeated int32 vled_voltage_ir_led_mv = 7;
+}
+
+message DebugDataHardwareTestBatteryDcirTestData2 {
+  repeated int64 timestamp = 1;
+  repeated int32 battery_current_while_load_on_ma = 2;
+  repeated int32 battery_current_while_load_off_ma = 3;
+  repeated int32 gauge_measured_soc_percent_at_start = 4;
+  repeated int32 battery_temperature_at_start = 5;
+}
+
+message DebugDataHardwareTestExternalClockMeasurementData {
+  repeated int64 timestamp = 1;
+  repeated int32 external_hf_clock_start_retries = 2;
+  repeated bool external_hf_clock_run_failure = 3;
+  repeated int32 external_hf_clock_frequency_diff_against_internal_oscillator = 4;
+  repeated int32 external_lf_clock_start_retries = 5;
+  repeated bool external_lf_clock_run_failure = 6;
+  repeated int32 external_hf_clock_frequency_diff_against_external_lf_oscillator = 7;
+}
+
+message DebugDataHardwareTestPinAdcCheckData {
+  repeated int64 timestamp = 1;
+  repeated int32 pin_port_number = 2;
+  repeated int32 pin_number = 3;
+  repeated int32 adc_check_type = 4;
+  repeated int32 first_adc_result_in_mv = 5;
+  repeated int32 second_adc_result_in_mv = 6;
+  repeated int32 third_adc_result_in_mv = 7;
+  repeated int32 fourth_adc_result_in_mv = 8;
+}
+
+message DebugDataHardwareTestResultValues {
+  repeated int64 timestamp = 1;
+  repeated int32 test_id = 2;
+  repeated int32 test_duration = 3;
+  repeated int32 average_current = 4;
+  repeated int32 temperature = 5;
+  repeated int32 start_vbat = 6;
+  repeated int32 end_vbat = 7;
+  repeated int32 minimum_current = 8;
+  repeated int32 maximum_current = 9;
+}
+
+message DebugDataHardwareTestStartValues {
+  repeated int64 timestamp = 1;
+  repeated int32 test_id = 2;
+  repeated int32 test_duration = 3;
+  repeated int32 valid_argument_count = 4;
+  repeated int32 argument1 = 5;
+  repeated int32 argument2 = 6;
+}
+
+message DebugDataHrSettingsData {
+  repeated int64 timestamp = 1;
+  repeated int32 led_on = 2;
+  repeated int32 adc_on = 3;
+  repeated int32 period = 4;
+  repeated int32 led1_power = 5;
+  repeated int32 led2_power = 6;
+  repeated int32 gain_setting = 7;
+  repeated int32 gain13_setting = 8;
+  repeated int32 selected_hr_config = 9;
+  repeated int32 amplitude_state = 10;
+}
+
+message DebugDataLegacySecurityFailure {
+  repeated int64 timestamp = 1;
+  repeated int32 failure_type = 2;
+  repeated int32 message_id = 3;
+  repeated int32 data_part_length = 4;
+  repeated int32 value_part_length = 5;
+}
+
+message DebugDataPeriodInfoStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 ticks_measuring_last_period = 2;
+  repeated float systime_spent_in_last_state_s = 3;
+  repeated int32 pfsm_state = 4;
+}
+
+message DebugDataPpgSignalQualityStats {
+  repeated int64 timestamp = 1;
+  repeated int32 ppg_measurement_slot_1 = 2;
+  repeated int32 ppg_measurement_slot_2 = 3;
+  repeated int32 pd_mask_1 = 4;
+  repeated int32 pd_mask_2 = 5;
+  repeated int32 led_channel_description_1 = 6;
+  repeated int32 led_channel_description_2 = 7;
+  repeated int32 measurement_duration = 8;
+  repeated int32 content_mask = 9;
+  repeated int32 dc_value = 10;
+  repeated int32 ac_scaler = 11;
+  repeated int32 ac_amplitude = 12;
+  repeated int32 snr_value = 13;
+  repeated int32 coupling_index = 14;
+  repeated int32 tune_reason = 15;
+  repeated int32 ibi_quality_percentage = 16;
+}
+
+message DebugDataRawDataDump {
+  repeated int64 timestamp = 1;
+  repeated int32 event_index = 2;
+  repeated int32 raw_data_bytes = 3;
+}
+
+message DebugDataRawRingBatteryVoltage {
+  repeated int64 timestamp = 1;
+  repeated bool continued = 2;
+  repeated int32 interval_type = 3;
+  bytes first_raw_voltage_mv = 4;
+  bytes battery_voltage_deltas_mv = 5;
+}
+
+message DebugDataRingHwInformation {
+  repeated int64 timestamp = 1;
+  repeated int32 hw_version = 2;
+  repeated int32 ring_size = 3;
+  repeated int32 battery_type = 4;
+  repeated int32 acm_type = 5;
+  repeated int32 afe_type = 6;
+  repeated int32 eflash_type = 7;
+}
+
+message DebugDataRingRotationIndexContributor {
+  repeated int64 timestamp = 1;
+  repeated int32 red_channel_to_pd1_dc_level = 2;
+  repeated int32 red_channel_to_pd2_dc_level = 3;
+  repeated int32 ir_channel_to_pd1_dc_level = 4;
+  repeated int32 ir_channel_to_pd2_dc_level = 5;
+}
+
+message DebugDataSecurityFailure {
+  repeated int64 timestamp = 1;
+  repeated int32 failure_type = 2;
+  repeated int32 bd_handle = 3;
+  repeated int32 auth_failure = 4;
+  repeated int32 bonded_security_level = 5;
+}
+
+message DebugDataSleepStatistics {
+  repeated int64 timestamp = 1;
+  repeated int32 ticks_in_deep_sleep = 2;
+  repeated int32 ticks_in_sleep = 3;
+  repeated int32 ticks_awake = 4;
+  repeated int32 pfsm_state = 5;
+}
+
+message DebugDataStackUsageStatistics {
+  repeated int64 timestamp = 1;
+  bytes cm0p_stack_max_usage = 2;
+  repeated int32 cm4_stack_max_usage = 3;
+  bytes cm0p_stack_size = 4;
+  repeated int32 cm4_stack_size = 5;
+  repeated int32 measurement_duration_s = 6;
+}
+
+message DebugEventInd {
+  repeated int64 timestamp = 1;
+  repeated bytes text = 2;
+}
+
+message EditBedtime {
+  int64 sleepdate_ms = 1;
+  int32 sleep_period_id = 2;
+  int64 new_bedtime_start_ms = 3;
+  int64 new_bedtime_end_ms = 4;
+}
+
+message EhrAcmIntensityEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 intensity1 = 2;
+  repeated int32 intensity2 = 3;
+  repeated int32 intensity3 = 4;
+  repeated int32 intensity4 = 5;
+  repeated int32 intensity5 = 6;
+  repeated int32 intensity6 = 7;
+  repeated int32 intensity7 = 8;
+}
+
+message EhrTraceEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 message_counter = 2;
+  repeated int32 trace_type = 3;
+  repeated int32 trace1_freq1 = 4;
+  repeated int32 trace1_freq2 = 5;
+  repeated int32 trace1_10_x_pov = 6;
+  repeated int32 trace2_freq1 = 7;
+  repeated int32 trace2_freq2 = 8;
+  repeated int32 trace2_10_x_pov = 9;
+  repeated int32 trace3_freq1 = 10;
+  repeated int32 trace3_freq2 = 11;
+  repeated int32 trace3_10_x_pov = 12;
+  repeated int32 trace4_freq1 = 13;
+  repeated int32 trace4_freq2 = 14;
+  repeated int32 trace4_10_x_pov = 15;
+}
+
+message ExerciseHrSession_v1 {
+  int32 activity = 1;
+  int32 min_hr = 2;
+  int32 max_hr = 3;
+}
+
+message ExerciseHrSession_v2 {
+  int32 algorithm_version = 1;
+  int32 reserved = 2;
+}
+
+message FeatureSessionEvent {
+  int64 timestamp = 1;
+  int32 capability = 2;
+  int32 status = 3;
+  oneof type {
+    bytes exercise_hr_v1 = 4;
+    bytes exercise_hr_v2 = 5;
+    bytes spo2 = 6;
+    bytes daytime_hr = 7;
+    bytes real_steps = 8;
+    bytes cva_ppg_sampler = 9;
+    bytes resting_hr_v1 = 10;
+    bytes spo2_v3 = 11;
+    bytes resting_hr_v2 = 12;
+    bytes daytime_hr_v4 = 13;
+  }
+}
+
+message FeatureSession {
+  repeated FeatureSessionEvent event = 1;
+}
+
+message GreenIbiAndAmpEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 ibi_ms = 2;
+  repeated int32 amp = 3;
+}
+
+message GreenIbiQualityEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 ibi = 2;
+  repeated int32 validity = 3;
+  repeated int32 quality = 4;
+}
+
+message HrvEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 average_hr_5min = 2;
+  repeated int32 average_rmssd_5min = 3;
+}
+
+message IbiAndAmplitudeEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 ibi = 2;
+  repeated int32 amp = 3;
+}
+
+message IndCommUartDetails {
+  int32 self_test_result = 1;
+  int32 vboost_ctrl = 2;
+  int32 comm_uart_tx = 3;
+  int32 comm_uart_rx = 4;
+  int32 comm_uart_rx_adc_out = 5;
+}
+
+message LinkParams {
+  int32 min_mv = 1;
+  int32 max_mv = 2;
+  int32 avg_mv = 3;
+  int32 boost_level = 4;
+  int32 fg_current = 5;
+}
+
+message MeasQualityEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 cqi = 2;
+  repeated int32 pqi = 3;
+}
+
+message MotionEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 orientation = 2;
+  repeated int32 motion_seconds = 3;
+  repeated float average_x = 4;
+  repeated float average_y = 5;
+  repeated float average_z = 6;
+  repeated int32 regularity = 7;
+  repeated int32 low_intensity = 8;
+  repeated int32 high_intensity = 9;
+}
+
+message MotionPeriod {
+  repeated int64 timestamp = 1;
+  repeated int32 event_type = 2;
+  repeated int32 sequence_number = 3;
+  repeated int32 motion_state_30s = 4;
+}
+
+message OldRawPpgData {
+  int64 timestamp = 1;
+  int64 period_start_time_ms = 2;
+  repeated int32 sample_values = 3;
+}
+
+message OnDemandMeas {
+  repeated int64 timestamp = 1;
+  repeated int32 skin_temp_celsius_hundreths = 2;
+  repeated int32 registered_motion_periods = 3;
+  repeated float average_hr = 4;
+  repeated int32 average_hrv = 5;
+  repeated float average_breathing_rate_per_minute = 6;
+  repeated int32 raw_ppg_sampling_rate = 7;
+}
+
+message OnDemandMotion {
+  repeated int64 timestamp = 1;
+  repeated int32 motion_counts = 2;
+}
+
+message OnDemandSession {
+  repeated int64 timestamp = 1;
+  repeated int32 event_subtype = 2;
+  repeated int32 skin_temp_interval_s = 3;
+  repeated int32 motion_period_interval_s = 4;
+  repeated int32 hr_interval_s = 5;
+  repeated int32 hrv_interval_s = 6;
+  repeated int32 breathing_rate_interval_s = 7;
+  repeated int32 raw_ppg_ppfg_rate_hz = 8;
+  repeated int32 max_session_duration_min = 9;
+}
+
+message OpenAfeParameters {
+  int32 ppg_measurement_slot = 1;
+  int32 led_channel_description_id = 2;
+  int32 led_current_in_half_ma_resolution = 3;
+  int32 ppg1_channel_pd_mask = 4;
+  int32 ppg2_channel_pd_mask = 5;
+  int32 meas_tint = 6;
+  int32 adc_range = 7;
+  int32 dac_offset = 8;
+  int32 average_in_measurement_sample = 9;
+  int32 hr_feature_mask = 10;
+  int32 pd_setlng = 11;
+  int32 led_setlng = 12;
+  int32 led_range = 13;
+}
+
+message DebugDataOpenAfePpgSettingsData {
+  repeated int64 timestamp = 1;
+  repeated int32 afe_hwid = 2;
+  repeated OpenAfeParameters open_afe_parameters_1 = 3;
+  repeated OpenAfeParameters open_afe_parameters_2 = 4;
+}
+
+message PinVoltages {
+  float i_sense_p_mv = 1;
+  float i_sense_n_mv = 2;
+}
+
+message CoilControlDetails {
+  int32 self_test_result = 1;
+  int32 pin_vboost_en = 2;
+  int32 pin_coil_switch = 3;
+  int32 pin_rsense_bypass = 4;
+  int32 pin_vboost_pwm = 5;
+  PinVoltages bps_0_cs_0_vboost_0_voltages = 6;
+  PinVoltages bps_1_cs_0_vboost_0_voltages = 7;
+  PinVoltages bps_1_cs_1_vboost_1_voltages = 8;
+  PinVoltages bps_0_cs_1_vboost_1_voltages = 9;
+  PinVoltages bps_0_cs_1_vboost_2_voltages = 10;
+}
+
+message DebugDataChargerSelfTestResults {
+  int32 self_test_result = 1;
+  float five_volts_in_p_mv = 2;
+  float five_volts_out_n_mv = 3;
+  int32 comm_uart_rx = 4;
+  int32 comm_uart_rx_adc_out = 5;
+  PinVoltages bps_0_cs_0_vboost_0_voltages = 6;
+  PinVoltages bps_1_cs_0_vboost_0_voltages = 7;
+  PinVoltages bps_1_cs_1_vboost_1_voltages = 8;
+  PinVoltages bps_0_cs_1_vboost_1_voltages = 9;
+  PinVoltages bps_0_cs_1_vboost_2_voltages = 10;
+}
+
+message PpgAmplitudeInd {
+  repeated int64 timestamp = 1;
+  repeated float cv_ppg_amplitude = 2;
+}
+
+message RawPpgSummary {
+  repeated int64 timestamp = 1;
+  repeated int64 period_start_ms = 2;
+  repeated int32 selection_criteria = 3;
+  repeated int32 ppg_sample_rate_hz = 4;
+  repeated int32 sample_scale_factor = 5;
+}
+
+message RealStepsFFTset {
+  int32 total_amplitude_mg = 1;
+  int32 stride_frequency = 2;
+  int32 stride_amplitude_frac = 3;
+  int32 first_non_locomotor_frequency = 4;
+  int32 first_non_locomotor_amplitude_frac = 5;
+  int32 gait_amplitude_frac = 6;
+  int32 frequency_bin_high_frac = 7;
+  int32 frequency_bin_mid_frac = 8;
+}
+
+message RealStepsFeatures {
+  repeated int64 timestamp = 1;
+  repeated RealStepsFFTset first_fft_set = 2;
+  repeated RealStepsFFTset second_fft_set = 3;
+  repeated RealStepsFFTset third_fft_set = 4;
+  repeated int32 sum_accel_mg_std = 5;
+  repeated int32 y_accel_std_ratio = 6;
+  repeated int32 z_accel_std_ratio = 7;
+}
+
+message RepDebugData {
+  repeated CorruptionLogEntry input_corruption_log = 1;
+}
+
+message RestingHrSession_v1 {
+  int32 algorithm_version = 1;
+}
+
+message RestingHrSession_v2 {
+  int32 algorithm_version = 1;
+  bool high_frequency_mode = 2;
+}
+
+message RingStartInd {
+  repeated int64 timestamp = 1;
+  repeated int32 resetreas_bit_map = 2;
+  repeated int32 hard_fault_indicator = 3;
+  repeated int32 ring_firmware_version_major = 4;
+  repeated int32 ring_firmware_version_middle = 5;
+  repeated int32 ring_firmware_version_minor = 6;
+  repeated int32 ring_bootloader_version_major = 7;
+  repeated int32 ring_bootloader_version_middle = 8;
+  repeated int32 ring_bootloader_version_minor = 9;
+  repeated int32 ring_api_version_major = 10;
+  repeated int32 ring_api_version_middle = 11;
+  repeated int32 ring_api_version_minor = 12;
+  repeated int32 ring_factory_reset_state = 13;
+  repeated int32 ring_debug_fw_used = 14;
+  repeated int32 ring_type = 15;
+}
+
+message ScanEnd {
+  repeated int64 timestamp = 1;
+  repeated int32 success_code = 2;
+  repeated float scan_duration_sec = 3;
+  repeated int32 slot = 4;
+  repeated int32 slot_2 = 5;
+  repeated int32 slot_3 = 6;
+  repeated int32 slot_4 = 7;
+  repeated int32 channel_id = 8;
+  repeated int32 channel_id_2 = 9;
+  repeated int32 channel_id_3 = 10;
+  repeated int32 channel_id_4 = 11;
+  repeated int32 pd_mask = 12;
+  repeated int32 pd_mask_2 = 13;
+  repeated int32 pd_mask_3 = 14;
+  repeated int32 pd_mask_4 = 15;
+}
+
+message ScanStart {
+  repeated int64 timestamp = 1;
+  repeated int32 triggering_feature = 2;
+  repeated int32 trigger_reason = 3;
+  repeated int32 classification_metric = 4;
+  repeated int32 candidate_slot_1 = 5;
+  repeated int32 candidate_slot_2 = 6;
+  repeated int32 candidate_slot_3 = 7;
+  repeated int32 candidate_slot_4 = 8;
+  repeated int32 candidate_slot_5 = 9;
+  repeated int32 candidate_slot_6 = 10;
+}
+
+message SelftestData {
+  oneof type {
+    bytes pmic = 1;
+    bytes afe = 2;
+    bytes temp_crosscheck = 3;
+    bytes clock = 4;
+    bytes empty = 5;
+  }
+}
+
+message SelftestDataEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 executed_test = 2;
+  repeated int32 failed_test = 3;
+  repeated int32 result = 4;
+  repeated int32 selftest_id = 5;
+  repeated int32 detailed_id = 6;
+  repeated SelftestData detailed_data = 7;
+}
+
+message SelftestData_AFE {
+  int32 part_id = 1;
+  repeated int32 led_pd_samples = 2;
+  repeated int32 ecg_samples = 3;
+  repeated int32 bioz_samples = 4;
+}
+
+message SelftestData_Clock {
+  int32 part_id = 1;
+  int32 source = 2;
+}
+
+message SelftestData_Empty {
+}
+
+message SelftestData_PMIC {
+  int32 part_id = 1;
+  int32 register_0 = 2;
+  int32 register_1 = 3;
+  int32 register_2 = 4;
+  int32 register_3 = 5;
+  int32 fault_bits = 6;
+}
+
+message SelftestData_TempCrosscheck {
+  int32 part_id = 1;
+  int32 reference_temp = 2;
+  int32 accelerometer_temp = 3;
+  int32 fuel_gauge_temp = 4;
+  int32 cpu_temp = 5;
+  int32 pmic_temp = 6;
+  int32 ntc1_temp = 7;
+}
+
+message SelftestEvent {
+  int64 timestamp = 1;
+  repeated int32 passed_test = 2;
+  repeated int32 failed_test = 3;
+}
+
+message SleepAcmPeriod {
+  repeated int64 timestamp = 1;
+  repeated float tmean = 2;
+  repeated float max = 3;
+  repeated float iqr = 4;
+  repeated float mad_tmean = 5;
+  repeated float mad_max = 6;
+  repeated float mad_iqr = 7;
+}
+
+message SleepPeriodInfo {
+  repeated int64 timestamp = 1;
+  repeated float average_hr = 2;
+  repeated float hr_trend = 3;
+  repeated float mzci = 4;
+  repeated float dzci = 5;
+  repeated float breath = 6;
+  repeated float breath_v = 7;
+  repeated int32 motion_count = 8;
+  repeated int32 sleep_state = 9;
+  repeated float cv = 10;
+}
+
+message SleepPhaseData {
+  repeated int64 timestamp = 1;
+  repeated int32 start_time = 2;
+  repeated int32 sleep_phases = 3;
+}
+
+message SleepPhaseDetails {
+  repeated int64 timestamp = 1;
+  repeated int32 start_time = 2;
+  repeated int32 sleep_phases = 3;
+}
+
+message SleepSummary1 {
+  repeated int64 timestamp = 1;
+  repeated int64 bedtime_start = 2;
+  repeated int64 bedtime_end = 3;
+  repeated int32 start_timezone_seconds = 4;
+  repeated int32 end_timezone_seconds = 5;
+}
+
+message SleepSummary2 {
+  repeated int64 timestamp = 1;
+  repeated int32 wake_time_30s_periods = 2;
+  repeated int32 rem_sleep_time_30s_periods = 3;
+  repeated int32 light_sleep_time_30s_periods = 4;
+  repeated int32 deep_sleep_time_30s_periods = 5;
+  repeated int32 time_of_lowest_hr_30s_period = 6;
+  repeated int32 lowest_hr_during_night = 7;
+  repeated int32 sleep_quality_score = 8;
+  repeated int32 wake_up_count = 9;
+  repeated int32 sleep_onset_latency_30s_periods = 10;
+}
+
+message SleepSummary3 {
+  repeated int64 timestamp = 1;
+  repeated int32 average_breath_rate = 2;
+  repeated int32 std_dev_breath_rate = 3;
+  repeated int32 average_heart_rate = 4;
+  repeated int32 midpoint_of_sleep = 5;
+  repeated int32 highest_temperature = 6;
+  repeated int32 restless_period_count = 7;
+  repeated int32 got_up_count = 8;
+}
+
+message SleepSummary4 {
+  repeated int64 timestamp = 1;
+  repeated int32 sleep_score_contrib = 2;
+  repeated int32 deep_sleep_score_contrib = 3;
+  repeated int32 rem_sleep_score_contrib = 4;
+  repeated int32 sleep_efficiency_score_contrib = 5;
+  repeated int32 sleep_latency_score_contrib = 6;
+  repeated int32 sleep_disturbances_score_contrib = 7;
+  repeated int32 circadian_alignment_score_contrib = 8;
+}
+
+message SleepTempEvent {
+  repeated int64 timestamp = 1;
+  repeated float temp = 2;
+}
+
+message Spo2DcEvent {
+  int32 channel_index = 1;
+  int32 beat_index = 2;
+  int64 timestamp = 3;
+  repeated int32 dc = 4;
+}
+
+message Spo2Event {
+  repeated int64 timestamp = 1;
+  repeated int32 beat_offset = 2;
+  repeated int32 beat_index = 3;
+  repeated int32 spo2_value = 4;
+  repeated int64 timestamp_fixed = 5;
+  repeated bool flush = 6;
+}
+
+message Spo2IbiAndAmplitudeEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 ibi_ms = 2;
+  repeated int32 amp = 3;
+  repeated int32 beat_index = 4;
+  repeated int32 channel_id = 5;
+}
+
+message Spo2Item {
+  int32 red_dc = 1;
+  int32 ir_dc = 2;
+  int32 ir_amplitude = 3;
+  int32 ir_pulse_count = 4;
+  int32 spo2 = 5;
+}
+
+message Spo2ComboEvent {
+  int64 timestamp = 1;
+  repeated Spo2Item items = 2;
+  int32 flush = 3;
+}
+
+message Spo2ComboData {
+  repeated Spo2ComboEvent event = 1;
+}
+
+message Spo2StableEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 spo2_avg = 2;
+  repeated int32 duration_seconds = 3;
+}
+
+message StateChangeInd {
+  repeated int64 timestamp = 1;
+  repeated int32 state = 2;
+  repeated bytes text = 3;
+}
+
+message SupplyDetails {
+  int32 self_test_result = 1;
+  int32 current_vdd_supply_mask = 2;
+  int32 fail_vdd_supply_mask = 3;
+}
+
+message TempEvent {
+  repeated int64 timestamp = 1;
+  repeated float temp1 = 2;
+  repeated float temp2 = 3;
+  repeated float temp3 = 4;
+  repeated float temp4 = 5;
+  repeated float temp5 = 6;
+  repeated float temp6 = 7;
+  repeated float temp7 = 8;
+}
+
+message TempPeriod {
+  repeated int64 timestamp = 1;
+  repeated float temp = 2;
+}
+
+message TimeSyncInd {
+  repeated int64 timestamp = 1;
+  repeated int32 ring_time = 2;
+  repeated int32 timezone_seconds = 3;
+}
+
+message TimeSyncIndSkipped {
+  repeated int64 timestamp = 1;
+  repeated int32 ring_time = 2;
+  repeated int32 timezone_seconds = 3;
+  repeated int32 skip_reason = 4;
+}
+
+message UsbVoltageDetails {
+  int32 self_test_result = 1;
+  float five_volts_in_p_mv = 2;
+  float five_volts_out_n_mv = 3;
+}
+
+message Version {
+  int32 major = 1;
+  int32 middle = 2;
+  int32 minor = 3;
+}
+
+message CvaPpgSamplerSession_v1 {
+  Version version = 1;
+  int32 sample_rate_hz = 2;
+  int32 meas_averaging = 3;
+}
+
+message DaytimeHrSession_v1 {
+  Version version = 1;
+}
+
+message DaytimeHrSession_v4 {
+  Version version = 1;
+  int32 meditation = 2;
+}
+
+message RawPpgMeasurement {
+  int64 start_time = 1;
+  repeated int32 sample = 2;
+  CvaPpgSamplerSession_v1 cva_ppg_sampler = 3;
+}
+
+message RawPpgData {
+  repeated RawPpgMeasurement measurement = 1;
+}
+
+message RealStepsSession_v1 {
+  Version version = 1;
+}
+
+message Spo2Session_v1 {
+  Version version = 1;
+}
+
+message Spo2Session_v3 {
+  Version version = 1;
+  bool high_frequency_mode = 2;
+}
+
+message WearEvent {
+  repeated int64 timestamp = 1;
+  repeated int32 state = 2;
+  repeated bytes text = 3;
+}
+
+message Event {
+  AddActivity add_activity = 1002;
+  int64 timestamp_utc = 10001;
+  int32 ringtime = 10002;
+  oneof event {
+    RingStartInd ring_start_ind = 1;
+    TimeSyncInd time_sync_ind = 2;
+    DebugEventInd debug_event_ind = 3;
+    SleepPeriodInfo sleep_period_info = 4;
+    MotionEvent motion_event = 5;
+    BedtimePeriod bedtime_period = 6;
+    IbiAndAmplitudeEvent ibi_and_amplitude_event = 7;
+    SleepAcmPeriod sleep_acm_period = 8;
+    SleepTempEvent sleep_temp_event = 9;
+    TempEvent temp_event = 10;
+    HrvEvent hrv_event = 11;
+    AlertEvent alert_event = 12;
+    DebugDataBatteryLevelChanged debug_data_battery_level_changed = 13;
+    StateChangeInd state_change_ind = 14;
+    RealStepsFeatures real_steps_features = 15;
+    FeatureSession feature_session = 16;
+    RawPpgData raw_ppg_data = 17;
+    WearEvent wear_event = 18;
+    ActivityInfoEvent activity_info_event = 19;
+    EhrTraceEvent ehr_trace_event = 20;
+    EhrAcmIntensityEvent ehr_acm_intensity_event = 21;
+    SleepSummary1 sleep_summary_1 = 22;
+    TempPeriod temp_period = 23;
+    DebugDataBleUsageStatistics debug_data_ble_usage_statistics = 24;
+    DebugDataBleModeSwitch debug_data_ble_mode_switch = 25;
+    DebugDataHrSettingsData debug_data_hr_settings_data = 26;
+    DebugDataSleepStatistics debug_data_sleep_statistics = 27;
+    DebugDataFlashUsageStatistics debug_data_flash_usage_statistics = 28;
+    DebugDataPeriodInfoStatistics debug_data_period_info_statistics = 29;
+    DebugDataLegacySecurityFailure debug_data_legacy_security_failure = 30;
+    DebugDataSecurityFailure debug_data_security_failure = 31;
+    bytes debug_data_background_dfu_state = 32;
+    DebugDataChargingTime debug_data_charging_time = 33;
+    DebugDataRawDataDump debug_data_raw_data_dump = 34;
+    DebugDataFuelGaugeStatistics debug_data_fuel_gauge_statistics = 35;
+    DebugDataFingerDetection debug_data_finger_detection = 36;
+    DebugDataAfePpgSettings debug_data_afe_ppg_settings = 37;
+    DebugDataBleModuleError debug_data_ble_module_error = 38;
+    DebugDataBlePairingCompleted debug_data_ble_pairing_completed = 39;
+    DebugDataBondInformationRemoved debug_data_bond_information_removed = 40;
+    DebugDataEventSyncStatistics debug_data_event_sync_statistics = 41;
+    DebugDataBootLoaderDebugLog debug_data_boot_loader_debug_log = 42;
+    DebugDataCrashDump debug_data_crash_dump = 43;
+    DebugDataCrashDumpEventQueue debug_data_crash_dump_event_queue = 44;
+    DebugDataFuelGaugeRegisterDump debug_data_fuel_gauge_register_dump = 45;
+    DebugDataRingHwInformation debug_data_ring_hw_information = 46;
+    DebugDataChargingEndStatistics debug_data_charging_end_statistics = 47;
+    DebugDataFuelGaugeLoggingRegisters debug_data_fuel_gauge_logging_registers = 48;
+    DebugDataBufferWrapped debug_data_buffer_wrapped = 49;
+    DebugDataEventSyncCacheStatistics debug_data_event_sync_cache_statistics = 50;
+    DebugDataHardwareTestStartValues debug_data_hardware_test_start_values = 51;
+    DebugDataChargingEndStatisticsContinued debug_data_charging_end_statistics_continued = 52;
+    DebugDataAfeStatisticsValues debug_data_afe_statistics_values = 53;
+    DebugDataAcmConfigurationChanged debug_data_acm_configuration_changed = 54;
+    DebugDataStackUsageStatistics debug_data_stack_usage_statistics = 55;
+    DebugDataFieldTestMcuPinConfigInfo0 debug_data_field_test_mcu_pin_config_info_0 = 56;
+    DebugDataFieldTestMcuPinConfigInfo1 debug_data_field_test_mcu_pin_config_info_1 = 57;
+    DebugDataHardwareTestPinAdcCheckData debug_data_hardware_test_pin_adc_check_data = 58;
+    DebugDataHardwareTestAdjacentPinAdcCheckData debug_data_hardware_test_adjacent_pin_adc_check_data = 59;
+    DebugDataRingRotationIndexContributor debug_data_ring_rotation_index_contributor = 60;
+    DebugDataHardwareTestBatteryDcirTestData1 debug_data_hardware_test_battery_dcir_test_data1 = 61;
+    DebugDataHardwareTestBatteryDcirTestData2 debug_data_hardware_test_battery_dcir_test_data2 = 62;
+    DebugDataPpgSignalQualityStats debug_data_ppg_signal_quality_stats = 63;
+    bytes debug_data_charger_firmware_and_psn = 64;
+    Spo2Event spo2_event = 65;
+    PpgAmplitudeInd ppg_amplitude_ind = 66;
+    MeasQualityEvent meas_quality_event = 67;
+    BleConnectionIndConnected ble_connection_ind_connected = 68;
+    BleConnectionIndConnectedExtended ble_connection_ind_connected_extended = 69;
+    BleConnectionIndDisconnected ble_connection_ind_disconnected = 70;
+    BleConnectionIndDisconnectedExtended ble_connection_ind_disconnected_extended = 71;
+    BleConnectionIndDisconnectedExtended2 ble_connection_ind_disconnected_extended2 = 72;
+    BleConnectionIndDisconnectedExtendedLinkQuality ble_connection_ind_disconnected_extended_link_quality = 73;
+    SelftestEvent selftest_event = 74;
+    GreenIbiQualityEvent green_ibi_quality_event = 75;
+    DebugDataOpenAfePpgSettingsData debug_data_open_afe_ppg_settings_data = 76;
+    DebugDataFieldTestInformation1 debug_data_field_test_information1 = 77;
+    DebugDataFieldTestInformation2 debug_data_field_test_information2 = 78;
+    DebugDataFieldTestInformation3 debug_data_field_test_information3 = 79;
+    DebugDataFieldTestInformation4 debug_data_field_test_information4 = 80;
+    DebugDataHardwareTestResultValues debug_data_hardware_test_result_values = 81;
+    SleepSummary2 sleep_summary_2 = 82;
+    SleepSummary3 sleep_summary_3 = 83;
+    SleepSummary4 sleep_summary_4 = 84;
+    SleepPhaseDetails sleep_phase_details = 85;
+    SleepPhaseData sleep_phase_data = 86;
+    SelftestDataEvent selftest_data_event = 87;
+    Spo2IbiAndAmplitudeEvent spo2_ibi_and_amplitude_event = 88;
+    MotionPeriod motion_period = 89;
+    RawPpgSummary raw_ppg_summary = 90;
+    DebugDataChargerLinkParams debug_data_charger_link_params = 91;
+    DebugDataChargerSelfTestResults debug_data_charger_self_test_results = 92;
+    GreenIbiAndAmpEvent green_ibi_and_amp_event = 93;
+    CvaRawPpgData cva_raw_ppg_data = 94;
+    ScanStart scan_start = 95;
+    ScanEnd scan_end = 96;
+    OnDemandSession on_demand_session = 97;
+    Spo2DcEvent spo2_dc_event = 98;
+    OnDemandMeas on_demand_meas = 99;
+    OldRawPpgData old_raw_ppg_data = 100;
+    OnDemandMotion on_demand_motion = 101;
+    Spo2StableEvent spo2_stable_event = 102;
+    Spo2ComboData spo2_combo_data = 103;
+    AmbientEvent ambient_event = 104;
+    DebugDataRawRingBatteryVoltage debug_data_raw_ring_battery_voltage = 105;
+    DebugDataDataReliabilityIndex debug_data_data_reliability_index = 106;
+    DebugDataHardwareTestExternalClockMeasurementData debug_data_hardware_test_external_clock_measurement_data = 107;
+    TimeSyncIndSkipped time_sync_ind_skipped = 108;
+    EditBedtime edit_bedtime = 1001;
+  }
+}
+
+message Events {
+  repeated Event event = 1;
+}
+
+message RingData {
+  RingStartInd ring_start_ind = 1;
+  TimeSyncInd time_sync_ind = 2;
+  DebugEventInd debug_event_ind = 3;
+  SleepPeriodInfo sleep_period_info = 4;
+  MotionEvent motion_event = 5;
+  BedtimePeriod bedtime_period = 6;
+  IbiAndAmplitudeEvent ibi_and_amplitude_event = 7;
+  SleepAcmPeriod sleep_acm_period = 8;
+  SleepTempEvent sleep_temp_event = 9;
+  TempEvent temp_event = 10;
+  HrvEvent hrv_event = 11;
+  AlertEvent alert_event = 12;
+  DebugDataBatteryLevelChanged debug_data_battery_level_changed = 13;
+  StateChangeInd state_change_ind = 14;
+  RealStepsFeatures real_steps_features = 15;
+  FeatureSession feature_session = 16;
+  RawPpgData raw_ppg_data = 17;
+  WearEvent wear_event = 18;
+  ActivityInfoEvent activity_info_event = 19;
+  EhrTraceEvent ehr_trace_event = 20;
+  EhrAcmIntensityEvent ehr_acm_intensity_event = 21;
+  SleepSummary1 sleep_summary_1 = 22;
+  TempPeriod temp_period = 23;
+  DebugDataBleUsageStatistics debug_data_ble_usage_statistics = 24;
+  DebugDataBleModeSwitch debug_data_ble_mode_switch = 25;
+  DebugDataHrSettingsData debug_data_hr_settings_data = 26;
+  DebugDataSleepStatistics debug_data_sleep_statistics = 27;
+  DebugDataFlashUsageStatistics debug_data_flash_usage_statistics = 28;
+  DebugDataPeriodInfoStatistics debug_data_period_info_statistics = 29;
+  DebugDataLegacySecurityFailure debug_data_legacy_security_failure = 30;
+  DebugDataSecurityFailure debug_data_security_failure = 31;
+  DebugDataBackgroundDFUState debug_data_background_dfu_state = 32;
+  DebugDataChargingTime debug_data_charging_time = 33;
+  DebugDataRawDataDump debug_data_raw_data_dump = 34;
+  DebugDataFuelGaugeStatistics debug_data_fuel_gauge_statistics = 35;
+  DebugDataFingerDetection debug_data_finger_detection = 36;
+  DebugDataAfePpgSettings debug_data_afe_ppg_settings = 37;
+  DebugDataBleModuleError debug_data_ble_module_error = 38;
+  DebugDataBlePairingCompleted debug_data_ble_pairing_completed = 39;
+  DebugDataBondInformationRemoved debug_data_bond_information_removed = 40;
+  DebugDataEventSyncStatistics debug_data_event_sync_statistics = 41;
+  DebugDataBootLoaderDebugLog debug_data_boot_loader_debug_log = 42;
+  DebugDataCrashDump debug_data_crash_dump = 43;
+  DebugDataCrashDumpEventQueue debug_data_crash_dump_event_queue = 44;
+  DebugDataFuelGaugeRegisterDump debug_data_fuel_gauge_register_dump = 45;
+  DebugDataRingHwInformation debug_data_ring_hw_information = 46;
+  DebugDataChargingEndStatistics debug_data_charging_end_statistics = 47;
+  DebugDataFuelGaugeLoggingRegisters debug_data_fuel_gauge_logging_registers = 48;
+  DebugDataBufferWrapped debug_data_buffer_wrapped = 49;
+  DebugDataEventSyncCacheStatistics debug_data_event_sync_cache_statistics = 50;
+  DebugDataHardwareTestStartValues debug_data_hardware_test_start_values = 51;
+  DebugDataChargingEndStatisticsContinued debug_data_charging_end_statistics_continued = 52;
+  DebugDataAfeStatisticsValues debug_data_afe_statistics_values = 53;
+  DebugDataAcmConfigurationChanged debug_data_acm_configuration_changed = 54;
+  DebugDataStackUsageStatistics debug_data_stack_usage_statistics = 55;
+  DebugDataFieldTestMcuPinConfigInfo0 debug_data_field_test_mcu_pin_config_info_0 = 56;
+  DebugDataFieldTestMcuPinConfigInfo1 debug_data_field_test_mcu_pin_config_info_1 = 57;
+  DebugDataHardwareTestPinAdcCheckData debug_data_hardware_test_pin_adc_check_data = 58;
+  DebugDataHardwareTestAdjacentPinAdcCheckData debug_data_hardware_test_adjacent_pin_adc_check_data = 59;
+  DebugDataRingRotationIndexContributor debug_data_ring_rotation_index_contributor = 60;
+  DebugDataHardwareTestBatteryDcirTestData1 debug_data_hardware_test_battery_dcir_test_data1 = 61;
+  DebugDataHardwareTestBatteryDcirTestData2 debug_data_hardware_test_battery_dcir_test_data2 = 62;
+  DebugDataPpgSignalQualityStats debug_data_ppg_signal_quality_stats = 63;
+  DebugDataChargerFirmwareAndPSN debug_data_charger_firmware_and_psn = 64;
+  Spo2Event spo2_event = 65;
+  PpgAmplitudeInd ppg_amplitude_ind = 66;
+  MeasQualityEvent meas_quality_event = 67;
+  BleConnectionIndConnected ble_connection_ind_connected = 68;
+  BleConnectionIndConnectedExtended ble_connection_ind_connected_extended = 69;
+  BleConnectionIndDisconnected ble_connection_ind_disconnected = 70;
+  BleConnectionIndDisconnectedExtended ble_connection_ind_disconnected_extended = 71;
+  BleConnectionIndDisconnectedExtended2 ble_connection_ind_disconnected_extended2 = 72;
+  BleConnectionIndDisconnectedExtendedLinkQuality ble_connection_ind_disconnected_extended_link_quality = 73;
+  SelftestEvent selftest_event = 74;
+  GreenIbiQualityEvent green_ibi_quality_event = 75;
+  DebugDataOpenAfePpgSettingsData debug_data_open_afe_ppg_settings_data = 76;
+  DebugDataFieldTestInformation1 debug_data_field_test_information1 = 77;
+  DebugDataFieldTestInformation2 debug_data_field_test_information2 = 78;
+  DebugDataFieldTestInformation3 debug_data_field_test_information3 = 79;
+  DebugDataFieldTestInformation4 debug_data_field_test_information4 = 80;
+  DebugDataHardwareTestResultValues debug_data_hardware_test_result_values = 81;
+  SleepSummary2 sleep_summary_2 = 82;
+  SleepSummary3 sleep_summary_3 = 83;
+  SleepSummary4 sleep_summary_4 = 84;
+  SleepPhaseDetails sleep_phase_details = 85;
+  SleepPhaseData sleep_phase_data = 86;
+  SelftestDataEvent selftest_data_event = 87;
+  Spo2IbiAndAmplitudeEvent spo2_ibi_and_amplitude_event = 88;
+  MotionPeriod motion_period = 89;
+  RawPpgSummary raw_ppg_summary = 90;
+  DebugDataChargerLinkParams debug_data_charger_link_params = 91;
+  DebugDataChargerSelfTestResults debug_data_charger_self_test_results = 92;
+  GreenIbiAndAmpEvent green_ibi_and_amp_event = 93;
+  ScanStart scan_start = 95;
+  ScanEnd scan_end = 96;
+  OnDemandSession on_demand_session = 97;
+  OnDemandMeas on_demand_meas = 99;
+  OnDemandMotion on_demand_motion = 101;
+  Spo2StableEvent spo2_stable_event = 102;
+  Spo2ComboData spo2_combo_data = 103;
+  AmbientEvent ambient_event = 104;
+  DebugDataRawRingBatteryVoltage debug_data_raw_ring_battery_voltage = 105;
+  DebugDataDataReliabilityIndex debug_data_data_reliability_index = 106;
+  DebugDataHardwareTestExternalClockMeasurementData debug_data_hardware_test_external_clock_measurement_data = 107;
+  TimeSyncIndSkipped time_sync_ind_skipped = 108;
+  Events events = 1000;
+  RepDebugData rep_debug_data = 2000;
+  repeated bytes exception_log = 3000;
+}

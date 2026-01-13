@@ -1,0 +1,632 @@
+{
+  "message_name": "RingData",
+  "binary_size": 682957,
+  "valid_fields": [
+    {
+      "number": 1,
+      "name": "ring_start_ind",
+      "schema_type": "RingStartInd",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 46
+    },
+    {
+      "number": 4,
+      "name": "sleep_period_info",
+      "schema_type": "SleepPeriodInfo",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 17052
+    },
+    {
+      "number": 5,
+      "name": "motion_event",
+      "schema_type": "MotionEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 1409
+    },
+    {
+      "number": 7,
+      "name": "ibi_and_amplitude_event",
+      "schema_type": "IbiAndAmplitudeEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 230876
+    },
+    {
+      "number": 8,
+      "name": "sleep_acm_period",
+      "schema_type": "SleepAcmPeriod",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 13848
+    },
+    {
+      "number": 9,
+      "name": "sleep_temp_event",
+      "schema_type": "SleepTempEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 6149
+    },
+    {
+      "number": 10,
+      "name": "temp_event",
+      "schema_type": "TempEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 9132
+    },
+    {
+      "number": 11,
+      "name": "hrv_event",
+      "schema_type": "HrvEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 513
+    },
+    {
+      "number": 14,
+      "name": "state_change_ind",
+      "schema_type": "StateChangeInd",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 1076
+    },
+    {
+      "number": 16,
+      "name": "feature_session",
+      "schema_type": "FeatureSession",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 148
+    },
+    {
+      "number": 18,
+      "name": "wear_event",
+      "schema_type": "WearEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 12
+    },
+    {
+      "number": 19,
+      "name": "activity_info_event",
+      "schema_type": "ActivityInfoEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 950
+    },
+    {
+      "number": 23,
+      "name": "temp_period",
+      "schema_type": "TempPeriod",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 35
+    },
+    {
+      "number": 67,
+      "name": "meas_quality_event",
+      "schema_type": "MeasQualityEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 1790
+    },
+    {
+      "number": 69,
+      "name": "ble_connection_ind_connected_extended",
+      "schema_type": "BleConnectionIndConnectedExtended",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 45
+    },
+    {
+      "number": 71,
+      "name": "ble_connection_ind_disconnected_extended",
+      "schema_type": "BleConnectionIndDisconnectedExtended",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 70
+    },
+    {
+      "number": 72,
+      "name": "ble_connection_ind_disconnected_extended2",
+      "schema_type": "BleConnectionIndDisconnectedExtended2",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 40
+    },
+    {
+      "number": 73,
+      "name": "ble_connection_ind_disconnected_extended_link_quality",
+      "schema_type": "BleConnectionIndDisconnectedExtendedLinkQuality",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 30
+    },
+    {
+      "number": 75,
+      "name": "green_ibi_quality_event",
+      "schema_type": "GreenIbiQualityEvent",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 8330
+    },
+    {
+      "number": 89,
+      "name": "motion_period",
+      "schema_type": "MotionPeriod",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 2258
+    },
+    {
+      "number": 95,
+      "name": "scan_start",
+      "schema_type": "ScanStart",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 360
+    },
+    {
+      "number": 96,
+      "name": "scan_end",
+      "schema_type": "ScanEnd",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 632
+    },
+    {
+      "number": 1000,
+      "name": "events",
+      "schema_type": "Events",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 388004
+    },
+    {
+      "number": 2000,
+      "name": "rep_debug_data",
+      "schema_type": "RepDebugData",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 1
+    },
+    {
+      "number": 3000,
+      "name": "exception_log",
+      "schema_type": "ExceptionLog",
+      "wire_type": "length_delimited",
+      "count": 1,
+      "total_bytes": 109
+    }
+  ],
+  "type_mismatches": [],
+  "missing_in_schema": [],
+  "missing_in_binary": [
+    {
+      "number": 2,
+      "name": "time_sync_ind",
+      "type": "TimeSyncInd"
+    },
+    {
+      "number": 3,
+      "name": "debug_event_ind",
+      "type": "DebugEventInd"
+    },
+    {
+      "number": 6,
+      "name": "bedtime_period",
+      "type": "BedtimePeriod"
+    },
+    {
+      "number": 12,
+      "name": "alert_event",
+      "type": "AlertEvent"
+    },
+    {
+      "number": 13,
+      "name": "debug_data_battery_level_changed",
+      "type": "DebugDataBatteryLevelChanged"
+    },
+    {
+      "number": 15,
+      "name": "real_steps_features",
+      "type": "RealStepsFeatures"
+    },
+    {
+      "number": 17,
+      "name": "raw_ppg_data",
+      "type": "RawPpgData"
+    },
+    {
+      "number": 20,
+      "name": "ehr_trace_event",
+      "type": "EhrTraceEvent"
+    },
+    {
+      "number": 21,
+      "name": "ehr_acm_intensity_event",
+      "type": "EhrAcmIntensityEvent"
+    },
+    {
+      "number": 22,
+      "name": "sleep_summary_1",
+      "type": "SleepSummary1"
+    },
+    {
+      "number": 24,
+      "name": "debug_data_ble_usage_statistics",
+      "type": "DebugDataBleUsageStatistics"
+    },
+    {
+      "number": 25,
+      "name": "debug_data_ble_mode_switch",
+      "type": "DebugDataBleModeSwitch"
+    },
+    {
+      "number": 26,
+      "name": "debug_data_hr_settings_data",
+      "type": "DebugDataHrSettingsData"
+    },
+    {
+      "number": 27,
+      "name": "debug_data_sleep_statistics",
+      "type": "DebugDataSleepStatistics"
+    },
+    {
+      "number": 28,
+      "name": "debug_data_flash_usage_statistics",
+      "type": "DebugDataFlashUsageStatistics"
+    },
+    {
+      "number": 29,
+      "name": "debug_data_period_info_statistics",
+      "type": "DebugDataPeriodInfoStatistics"
+    },
+    {
+      "number": 30,
+      "name": "debug_data_legacy_security_failure",
+      "type": "DebugDataLegacySecurityFailure"
+    },
+    {
+      "number": 31,
+      "name": "debug_data_security_failure",
+      "type": "DebugDataSecurityFailure"
+    },
+    {
+      "number": 32,
+      "name": "debug_data_background_dfu_state",
+      "type": "DebugDataBackgroundDFUState"
+    },
+    {
+      "number": 33,
+      "name": "debug_data_charging_time",
+      "type": "DebugDataChargingTime"
+    },
+    {
+      "number": 34,
+      "name": "debug_data_raw_data_dump",
+      "type": "DebugDataRawDataDump"
+    },
+    {
+      "number": 35,
+      "name": "debug_data_fuel_gauge_statistics",
+      "type": "DebugDataFuelGaugeStatistics"
+    },
+    {
+      "number": 36,
+      "name": "debug_data_finger_detection",
+      "type": "DebugDataFingerDetection"
+    },
+    {
+      "number": 37,
+      "name": "debug_data_afe_ppg_settings",
+      "type": "DebugDataAfePpgSettings"
+    },
+    {
+      "number": 38,
+      "name": "debug_data_ble_module_error",
+      "type": "DebugDataBleModuleError"
+    },
+    {
+      "number": 39,
+      "name": "debug_data_ble_pairing_completed",
+      "type": "DebugDataBlePairingCompleted"
+    },
+    {
+      "number": 40,
+      "name": "debug_data_bond_information_removed",
+      "type": "DebugDataBondInformationRemoved"
+    },
+    {
+      "number": 41,
+      "name": "debug_data_event_sync_statistics",
+      "type": "DebugDataEventSyncStatistics"
+    },
+    {
+      "number": 42,
+      "name": "debug_data_boot_loader_debug_log",
+      "type": "DebugDataBootLoaderDebugLog"
+    },
+    {
+      "number": 43,
+      "name": "debug_data_crash_dump",
+      "type": "DebugDataCrashDump"
+    },
+    {
+      "number": 44,
+      "name": "debug_data_crash_dump_event_queue",
+      "type": "DebugDataCrashDumpEventQueue"
+    },
+    {
+      "number": 45,
+      "name": "debug_data_fuel_gauge_register_dump",
+      "type": "DebugDataFuelGaugeRegisterDump"
+    },
+    {
+      "number": 46,
+      "name": "debug_data_ring_hw_information",
+      "type": "DebugDataRingHwInformation"
+    },
+    {
+      "number": 47,
+      "name": "debug_data_charging_end_statistics",
+      "type": "DebugDataChargingEndStatistics"
+    },
+    {
+      "number": 48,
+      "name": "debug_data_fuel_gauge_logging_registers",
+      "type": "DebugDataFuelGaugeLoggingRegisters"
+    },
+    {
+      "number": 49,
+      "name": "debug_data_buffer_wrapped",
+      "type": "DebugDataBufferWrapped"
+    },
+    {
+      "number": 50,
+      "name": "debug_data_event_sync_cache_statistics",
+      "type": "DebugDataEventSyncCacheStatistics"
+    },
+    {
+      "number": 51,
+      "name": "debug_data_hardware_test_start_values",
+      "type": "DebugDataHardwareTestStartValues"
+    },
+    {
+      "number": 52,
+      "name": "debug_data_charging_end_statistics_continued",
+      "type": "DebugDataChargingEndStatisticsContinued"
+    },
+    {
+      "number": 53,
+      "name": "debug_data_afe_statistics_values",
+      "type": "DebugDataAfeStatisticsValues"
+    },
+    {
+      "number": 54,
+      "name": "debug_data_acm_configuration_changed",
+      "type": "DebugDataAcmConfigurationChanged"
+    },
+    {
+      "number": 55,
+      "name": "debug_data_stack_usage_statistics",
+      "type": "DebugDataStackUsageStatistics"
+    },
+    {
+      "number": 56,
+      "name": "debug_data_field_test_mcu_pin_config_info_0",
+      "type": "DebugDataFieldTestMcuPinConfigInfo0"
+    },
+    {
+      "number": 57,
+      "name": "debug_data_field_test_mcu_pin_config_info_1",
+      "type": "DebugDataFieldTestMcuPinConfigInfo1"
+    },
+    {
+      "number": 58,
+      "name": "debug_data_hardware_test_pin_adc_check_data",
+      "type": "DebugDataHardwareTestPinAdcCheckData"
+    },
+    {
+      "number": 59,
+      "name": "debug_data_hardware_test_adjacent_pin_adc_check_data",
+      "type": "DebugDataHardwareTestAdjacentPinAdcCheckData"
+    },
+    {
+      "number": 60,
+      "name": "debug_data_ring_rotation_index_contributor",
+      "type": "DebugDataRingRotationIndexContributor"
+    },
+    {
+      "number": 61,
+      "name": "debug_data_hardware_test_battery_dcir_test_data1",
+      "type": "DebugDataHardwareTestBatteryDcirTestData1"
+    },
+    {
+      "number": 62,
+      "name": "debug_data_hardware_test_battery_dcir_test_data2",
+      "type": "DebugDataHardwareTestBatteryDcirTestData2"
+    },
+    {
+      "number": 63,
+      "name": "debug_data_ppg_signal_quality_stats",
+      "type": "DebugDataPpgSignalQualityStats"
+    },
+    {
+      "number": 64,
+      "name": "debug_data_charger_firmware_and_psn",
+      "type": "DebugDataChargerFirmwareAndPSN"
+    },
+    {
+      "number": 65,
+      "name": "spo2_event",
+      "type": "Spo2Event"
+    },
+    {
+      "number": 66,
+      "name": "ppg_amplitude_ind",
+      "type": "PpgAmplitudeInd"
+    },
+    {
+      "number": 68,
+      "name": "ble_connection_ind_connected",
+      "type": "BleConnectionIndConnected"
+    },
+    {
+      "number": 70,
+      "name": "ble_connection_ind_disconnected",
+      "type": "BleConnectionIndDisconnected"
+    },
+    {
+      "number": 74,
+      "name": "selftest_event",
+      "type": "SelftestEvent"
+    },
+    {
+      "number": 76,
+      "name": "debug_data_open_afe_ppg_settings_data",
+      "type": "DebugDataOpenAfePpgSettingsData"
+    },
+    {
+      "number": 77,
+      "name": "debug_data_field_test_information1",
+      "type": "DebugDataFieldTestInformation1"
+    },
+    {
+      "number": 78,
+      "name": "debug_data_field_test_information2",
+      "type": "DebugDataFieldTestInformation2"
+    },
+    {
+      "number": 79,
+      "name": "debug_data_field_test_information3",
+      "type": "DebugDataFieldTestInformation3"
+    },
+    {
+      "number": 80,
+      "name": "debug_data_field_test_information4",
+      "type": "DebugDataFieldTestInformation4"
+    },
+    {
+      "number": 81,
+      "name": "debug_data_hardware_test_result_values",
+      "type": "DebugDataHardwareTestResultValues"
+    },
+    {
+      "number": 82,
+      "name": "sleep_summary_2",
+      "type": "SleepSummary2"
+    },
+    {
+      "number": 83,
+      "name": "sleep_summary_3",
+      "type": "SleepSummary3"
+    },
+    {
+      "number": 84,
+      "name": "sleep_summary_4",
+      "type": "SleepSummary4"
+    },
+    {
+      "number": 85,
+      "name": "sleep_phase_details",
+      "type": "SleepPhaseDetails"
+    },
+    {
+      "number": 86,
+      "name": "sleep_phase_data",
+      "type": "SleepPhaseData"
+    },
+    {
+      "number": 87,
+      "name": "selftest_data_event",
+      "type": "SelftestDataEvent"
+    },
+    {
+      "number": 88,
+      "name": "spo2_ibi_and_amplitude_event",
+      "type": "Spo2IbiAndAmplitudeEvent"
+    },
+    {
+      "number": 90,
+      "name": "raw_ppg_summary",
+      "type": "RawPpgSummary"
+    },
+    {
+      "number": 91,
+      "name": "debug_data_charger_link_params",
+      "type": "DebugDataChargerLinkParams"
+    },
+    {
+      "number": 92,
+      "name": "debug_data_charger_self_test_results",
+      "type": "DebugDataChargerSelfTestResults"
+    },
+    {
+      "number": 93,
+      "name": "green_ibi_and_amp_event",
+      "type": "GreenIbiAndAmpEvent"
+    },
+    {
+      "number": 97,
+      "name": "on_demand_session",
+      "type": "OnDemandSession"
+    },
+    {
+      "number": 99,
+      "name": "on_demand_meas",
+      "type": "OnDemandMeas"
+    },
+    {
+      "number": 101,
+      "name": "on_demand_motion",
+      "type": "OnDemandMotion"
+    },
+    {
+      "number": 102,
+      "name": "spo2_stable_event",
+      "type": "Spo2StableEvent"
+    },
+    {
+      "number": 103,
+      "name": "spo2_combo_data",
+      "type": "Spo2ComboData"
+    },
+    {
+      "number": 104,
+      "name": "ambient_event",
+      "type": "AmbientEvent"
+    },
+    {
+      "number": 105,
+      "name": "debug_data_raw_ring_battery_voltage",
+      "type": "DebugDataRawRingBatteryVoltage"
+    },
+    {
+      "number": 106,
+      "name": "debug_data_data_reliability_index",
+      "type": "DebugDataDataReliabilityIndex"
+    },
+    {
+      "number": 107,
+      "name": "debug_data_hardware_test_external_clock_measurement_data",
+      "type": "DebugDataHardwareTestExternalClockMeasurementData"
+    },
+    {
+      "number": 108,
+      "name": "time_sync_ind_skipped",
+      "type": "TimeSyncIndSkipped"
+    }
+  ],
+  "summary": {
+    "valid": 25,
+    "mismatches": 0,
+    "missing_schema": 0,
+    "missing_binary": 83,
+    "passed": true
+  }
+}

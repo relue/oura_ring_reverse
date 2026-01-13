@@ -90,6 +90,10 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Executing: sendFactoryReset()")
                     sendFactoryReset()
                 }
+                "export", "export_data" -> {
+                    Log.d(TAG, "Executing: exportEventData()")
+                    exportEventData()
+                }
                 else -> {
                     // Check for set_key:HEXKEY command to set auth key without writing to ring
                     if (cmd.startsWith("set_key:")) {
@@ -236,7 +240,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     // Target events to fetch (will go back target_events * 70 sequence numbers)
-    private val targetEvents = 3000
+    private val targetEvents = 9000
     private val maxEventsToKeep = targetEvents * 70  // Approx 70 seq nums per event (after blacklist)
 
     // Continuous fetch tracking
@@ -2660,6 +2664,61 @@ class MainActivity : AppCompatActivity() {
 
         statusText.text = "Stopped"
         log("Cleanup complete. Total heartbeats: $heartbeatCount")
+    }
+
+    // Export event data to file for PC analysis
+    private fun exportEventData() {
+        if (eventData.isEmpty()) {
+            log("❌ No events to export")
+            return
+        }
+
+        try {
+            val exportDir = getExternalFilesDir(null) ?: filesDir
+            val timestamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+            val exportFile = java.io.File(exportDir, "ring_events_$timestamp.txt")
+
+            exportFile.printWriter().use { out ->
+                out.println("# Oura Ring Event Export")
+                out.println("# Timestamp: ${java.util.Date()}")
+                out.println("# Events: ${eventData.size}")
+                out.println("#")
+                out.println("# Format: index|tag_hex|hex_data")
+                out.println("#")
+
+                for ((i, event) in eventData.withIndex()) {
+                    val tag = if (event.isNotEmpty()) event[0].toInt() and 0xFF else 0
+                    val tagName = getEventTypeName(tag)
+                    val hex = event.joinToString("") { "%02x".format(it) }
+                    out.println("$i|0x%02x|$tagName|$hex".format(tag))
+                }
+
+                out.println("#")
+                out.println("# Event Type Summary:")
+                val eventCounts = mutableMapOf<Int, Int>()
+                for (event in eventData) {
+                    if (event.isNotEmpty()) {
+                        val tag = event[0].toInt() and 0xFF
+                        eventCounts[tag] = (eventCounts[tag] ?: 0) + 1
+                    }
+                }
+                for ((tag, count) in eventCounts.toSortedMap()) {
+                    out.println("# 0x%02x (%s): %d events".format(tag, getEventTypeName(tag), count))
+                }
+            }
+
+            val filePath = exportFile.absolutePath
+            log("✅ Exported ${eventData.size} events to:")
+            log("📁 $filePath")
+            Log.d(TAG, "Export file: $filePath")
+
+            // Also log how to pull via ADB
+            log("💡 Pull file: adb pull $filePath ./")
+
+        } catch (e: Exception) {
+            log("❌ Export failed: ${e.message}")
+            Log.e(TAG, "Export error", e)
+        }
     }
 
     override fun onDestroy() {

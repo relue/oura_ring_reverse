@@ -28,28 +28,31 @@ python oura_ble_client.py
 ```
 oura_ring_reverse/
 ├── docs/                      # Documentation
-│   ├── ANALYSIS_REPORT.md    # Complete reverse engineering report
-│   ├── protocol/              # Protocol specifications
-│   │   ├── OURA_RING_COMMANDS.md
-│   │   └── oura_ring_complete_protocol.md
-│   └── BLUETOOTH_TROUBLESHOOTING.md
+│   ├── README.md             # Documentation index & navigation
+│   ├── getting-started/      # Setup, Python client, troubleshooting
+│   ├── protocol/             # BLE protocol specs (overview, commands, events, auth)
+│   ├── guides/               # Implementation guides (heartbeat, sleep data)
+│   ├── reverse-engineering/  # RE methods (Frida, native libs, protobuf)
+│   ├── security/             # Security analysis (keys, ML models)
+│   └── archive/              # Original documentation preserved
 │
 ├── python_client/             # Python BLE implementation
 │   ├── oura_ble_client.py    # Main client
 │   └── scan_ble.py           # BLE scanner
 │
 ├── android_app/               # Android Studio project
-│   ├── app/src/main/java/com/example/reverseoura/
-│   │   ├── MainActivity.kt   # Main app with BLE
-│   │   └── RingEventParser.kt
-│   └── build.gradle.kts
+│
+├── native_parser/             # Protobuf & ML model tools
+│   ├── ringeventparser.proto # Extracted schema (2070 lines)
+│   ├── decrypted_models/     # 28 PyTorch models (decrypted)
+│   └── *.py                  # Parsing scripts
 │
 ├── frida_scripts/             # Dynamic instrumentation
 │
 └── _large_files/              # NOT IN GIT (local only)
     ├── apks/                  # Original Oura APK (252MB)
     ├── decompiled/            # Decompiled sources (843MB)
-    ├── native/                # Native libraries
+    ├── models/                # Encrypted ML models
     └── tools/                 # Build tools (4.4GB)
 ```
 
@@ -88,7 +91,7 @@ oura_ring_reverse/
 - `0x42` - Authenticate
 - And 30+ more...
 
-See `docs/protocol/` for complete specifications.
+See [docs/README.md](docs/README.md) for complete documentation index.
 
 ## Requirements
 

@@ -16,11 +16,30 @@ Full automation of Oura Ring 4 control from PC terminal via Android phone as BLE
 - [x] SetAuthKey command structure implemented
 - [x] Raw hex command sending
 - [x] Notification/response logging
+- [x] **Authentication flow complete** (GetAuthNonce -> AES encrypt -> Authenticate)
+- [x] **Real-time heartbeat monitoring** (IBI streaming at ~1Hz)
+- [x] **Event data retrieval** (GetEvent with binary search pagination)
+- [x] **Export command** (saves events to file for PC analysis)
+- [x] **20 event types verified** (sleep, temp, motion, activity, HRV, etc.)
+- [x] **Overnight sleep data capture** (9 hours, 4794 events)
 
 ### Blocked
-- [ ] Autonomous pairing (pairing dialog requires UI interaction)
-- [ ] Authentication (ring was factory reset, needs new pairing + auth key)
-- [ ] Heartbeat monitoring (requires auth)
+- [ ] Autonomous pairing (pairing dialog requires UI interaction on some devices)
+
+### Completed (2026-01-11)
+- [x] Authentication (ring was factory reset, new auth key set and working)
+- [x] Heartbeat monitoring (real-time IBI: 66 BPM verified)
+- [x] Data retrieval (184 events captured from 13 event types)
+- [x] Protocol documentation (protocolknowledge.md updated)
+
+### Completed (2026-01-12)
+- [x] Overnight sleep data capture (4794 events over 9 hours)
+- [x] Sleep event parsing (0x6a SLEEP_PERIOD_INFO_2 fully decoded)
+- [x] Sleep HR analysis: 51.5-70 BPM (avg 59 BPM)
+- [x] Sleep temp analysis: ~35°C (7 sensors)
+- [x] HRV event parsing (0x5d)
+- [x] 17/20 event types fully verified with parsers
+- [x] Protocol documentation complete (protocolknowledge.md)
 
 ## Implementation Steps
 
