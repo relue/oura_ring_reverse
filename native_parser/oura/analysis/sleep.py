@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 # Try to import SleepNet for ML-based classification
 _SLEEPNET_AVAILABLE = False
 _sleepnet_model = None
+_sleepnet_result_cache = {}  # Cache results by reader id to avoid duplicate runs
 
 def _get_sleepnet():
     """Get or create the SleepNet model (singleton)."""
@@ -37,6 +38,16 @@ def _get_sleepnet():
             print(f"[SleepAnalyzer] SleepNet not available: {e}")
     return _sleepnet_model
 
+def _get_cached_result(reader, night_index: int):
+    """Get cached SleepNet result for reader + night (avoids duplicate runs)."""
+    cache_key = (id(reader), night_index)
+    return _sleepnet_result_cache.get(cache_key)
+
+def _cache_result(reader, night_index: int, result):
+    """Cache SleepNet result for reader + night."""
+    cache_key = (id(reader), night_index)
+    _sleepnet_result_cache[cache_key] = result
+
 
 class SleepAnalyzer:
     """Sleep-specific analysis.
@@ -45,7 +56,7 @@ class SleepAnalyzer:
     Uses SleepNet ML model when available for proper REM classification.
 
     Example:
-        analyzer = OuraAnalyzer("ring_data.pb")
+        analyzer = OuraAnalyzer("input_data/ring_data.pb")
         sleep = analyzer.sleep
 
         print(sleep.stages)              # [0, 1, 2, 3, ...] with ML classification
@@ -60,24 +71,33 @@ class SleepAnalyzer:
         3 = REM
     """
 
-    def __init__(self, reader: 'RingDataReader', use_ml: bool = True):
+    def __init__(self, reader: 'RingDataReader', use_ml: bool = True, night_index: int = -1):
         """Initialize with a RingDataReader.
 
         Args:
             reader: RingDataReader instance with loaded data
             use_ml: Whether to use SleepNet ML model for classification (default True)
+            night_index: Which night to analyze (-1 = last/most recent, 0 = first, etc.)
         """
         self._reader = reader
         self._use_ml = use_ml
+        self._night_index = night_index
         self._native_stages: Optional[NativeSleepStages] = None
         self._ml_result = None  # Cached SleepNet result
         self._score: Optional[SleepScore] = None
         self._ml_attempted = False
 
     def _get_ml_result(self):
-        """Get SleepNet ML classification result (cached)."""
+        """Get SleepNet ML classification result (cached globally per reader + night)."""
         if self._ml_result is not None:
             return self._ml_result
+
+        # Check global cache first (avoids duplicate runs across SleepAnalyzer instances)
+        cached = _get_cached_result(self._reader, self._night_index)
+        if cached is not None:
+            self._ml_result = cached
+            return self._ml_result
+
         if self._ml_attempted:
             return None
         self._ml_attempted = True
@@ -90,7 +110,11 @@ class SleepAnalyzer:
             return None
 
         try:
-            self._ml_result = sleepnet.predict_from_reader(self._reader)
+            self._ml_result = sleepnet.predict_from_reader(
+                self._reader,
+                night_index=self._night_index
+            )
+            _cache_result(self._reader, self._night_index, self._ml_result)  # Cache globally
             return self._ml_result
         except Exception as e:
             print(f"[SleepAnalyzer] ML prediction failed: {e}")

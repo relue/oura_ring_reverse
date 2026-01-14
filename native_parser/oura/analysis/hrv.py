@@ -21,7 +21,7 @@ class HRVAnalyzer:
     Provides RMSSD metrics, per-stage analysis, and balance calculations.
 
     Example:
-        analyzer = OuraAnalyzer("ring_data.pb")
+        analyzer = OuraAnalyzer("input_data/ring_data.pb")
         hrv = analyzer.hrv
 
         print(hrv.average_rmssd)         # 21.2

@@ -31,7 +31,6 @@ from oura.data.models import (
     NativeSleepStages,
 )
 from oura.data.timesync import SyncPoint, load_sync_point
-from oura.data.events_parser import parse_events_file, ParsedEvents
 
 
 class RingDataReader:
@@ -41,7 +40,7 @@ class RingDataReader:
     It provides convenient properties for accessing different data types.
 
     Example:
-        reader = RingDataReader("ring_data.pb")
+        reader = RingDataReader("input_data/ring_data.pb")
         print(f"HR: {reader.heart_rate.average_bpm:.1f} BPM")
         print(f"Temp: {reader.temperature.average_celsius:.2f}C")
         print(reader.summary())
@@ -82,9 +81,6 @@ class RingDataReader:
         self._motion: Optional[MotionData] = None
         self._ring_info: Optional[RingInfo] = None
 
-        # Parsed events with real timestamps (from ring_events.txt)
-        self._parsed_events: Optional[ParsedEvents] = None
-
     @property
     def sync_point(self) -> Optional[SyncPoint]:
         """Time sync point for timestamp conversion."""
@@ -96,77 +92,20 @@ class RingDataReader:
         return self._sync_point is not None
 
     @property
-    def has_events(self) -> bool:
-        """Whether parsed events with real timestamps are available."""
-        return self._parsed_events is not None
-
-    def _convert_timestamps(self, timestamps: List[int]) -> List[int]:
-        """Convert ring timestamps to UTC milliseconds if sync available."""
-        if self._sync_point is None:
-            return timestamps
-        return [self._sync_point.ring_to_utc_ms(ts) for ts in timestamps]
-
-    def load_events_file(self, events_path: str) -> None:
-        """Load real timestamps from ring_events.txt file.
-
-        This extracts actual ring timestamps from the events file and
-        uses them to replace the relative timestamps in the protobuf.
-
-        Args:
-            events_path: Path to ring_events.txt
-        """
-        self._parsed_events = parse_events_file(events_path)
-
-        # Apply sync point to get UTC timestamps
-        if self._sync_point is not None:
-            self._parsed_events = self._parsed_events.apply_sync(self._sync_point)
-
-        # Clear cached data to force reload with new timestamps
-        self._heart_rate = None
-        self._sleep = None
-        self._temperature = None
-        self._hrv = None
-        self._motion = None
-
-    @classmethod
-    def from_events(
-        cls,
-        pb_path: str,
-        events_path: str,
-        sync_point: Optional[Union[SyncPoint, str, Path]] = 'auto'
-    ) -> 'RingDataReader':
-        """Create reader with real timestamps from events file.
-
-        This is the recommended way to load data when you have both
-        the protobuf and the original events file.
-
-        Args:
-            pb_path: Path to ring_data.pb
-            events_path: Path to ring_events.txt
-            sync_point: Time sync configuration
-
-        Returns:
-            RingDataReader with real UTC timestamps
-        """
-        reader = cls(pb_path, sync_point=sync_point)
-        reader.load_events_file(events_path)
-        return reader
-
-    @property
     def raw(self) -> proto.RingData:
         """Access the raw protobuf RingData object."""
         return self._rd
 
     @property
     def heart_rate(self) -> HeartRateData:
-        """Heart rate / IBI data with UTC timestamps if sync available."""
+        """Heart rate / IBI data with UTC timestamps."""
         if self._heart_rate is None:
             self._heart_rate = HeartRateData()
             if self._rd.HasField('ibi_and_amplitude_event'):
                 ev = self._rd.ibi_and_amplitude_event
-                raw_timestamps = list(ev.timestamp)
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._heart_rate = HeartRateData(
-                    timestamps=self._convert_timestamps(raw_timestamps),
+                    timestamps=list(ev.timestamp),
                     ibi_ms=list(ev.ibi),
                     amplitudes=list(ev.amp),
                 )
@@ -174,7 +113,7 @@ class RingDataReader:
 
     @property
     def sleep(self) -> SleepData:
-        """Sleep period data with UTC timestamps if sync available."""
+        """Sleep period data with UTC timestamps."""
         if self._sleep is None:
             self._sleep = SleepData()
             if self._rd.HasField('sleep_period_info'):
@@ -185,15 +124,9 @@ class RingDataReader:
                 if self._rd.HasField('hrv_event'):
                     rmssd_values = list(self._rd.hrv_event.average_rmssd_5min)
 
-                # Use parsed event timestamps if available (real UTC)
-                if self._parsed_events and self._parsed_events.sleep_timestamps:
-                    timestamps = self._parsed_events.sleep_timestamps
-                else:
-                    raw_timestamps = list(ev.timestamp)
-                    timestamps = self._convert_timestamps(raw_timestamps)
-
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._sleep = SleepData(
-                    timestamps=timestamps,
+                    timestamps=list(ev.timestamp),
                     average_hr=list(ev.average_hr),
                     hr_trend=list(ev.hr_trend),
                     breath_rate=list(ev.breath),
@@ -209,35 +142,28 @@ class RingDataReader:
 
     @property
     def temperature(self) -> TemperatureData:
-        """Temperature data with UTC timestamps if sync available."""
+        """Temperature data with UTC timestamps."""
         if self._temperature is None:
             self._temperature = TemperatureData()
             if self._rd.HasField('sleep_temp_event'):
                 ev = self._rd.sleep_temp_event
-
-                # Use parsed event timestamps if available
-                if self._parsed_events and self._parsed_events.temp_timestamps:
-                    timestamps = self._parsed_events.temp_timestamps
-                else:
-                    raw_timestamps = list(ev.timestamp)
-                    timestamps = self._convert_timestamps(raw_timestamps)
-
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._temperature = TemperatureData(
-                    timestamps=timestamps,
+                    timestamps=list(ev.timestamp),
                     temp_celsius=list(ev.temp),
                 )
         return self._temperature
 
     @property
     def hrv(self) -> HRVData:
-        """Heart rate variability data with UTC timestamps if sync available."""
+        """Heart rate variability data with UTC timestamps."""
         if self._hrv is None:
             self._hrv = HRVData()
             if self._rd.HasField('hrv_event'):
                 ev = self._rd.hrv_event
-                raw_timestamps = list(ev.timestamp)
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._hrv = HRVData(
-                    timestamps=self._convert_timestamps(raw_timestamps),
+                    timestamps=list(ev.timestamp),
                     average_hr_5min=list(ev.average_hr_5min),
                     average_rmssd_5min=list(ev.average_rmssd_5min),
                 )
@@ -245,7 +171,7 @@ class RingDataReader:
 
     @property
     def activity(self) -> ActivityData:
-        """Activity and step count data with UTC timestamps if sync available."""
+        """Activity and step count data with UTC timestamps."""
         if self._activity is None:
             self._activity = ActivityData()
             if self._rd.HasField('activity_info_event'):
@@ -257,9 +183,10 @@ class RingDataReader:
                         values = list(getattr(ev, attr))
                         if values:
                             met_levels[attr] = values
-                raw_timestamps = list(ev.timestamp)
+
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._activity = ActivityData(
-                    timestamps=self._convert_timestamps(raw_timestamps),
+                    timestamps=list(ev.timestamp),
                     step_count=list(ev.step_count),
                     met_levels=met_levels,
                 )
@@ -267,14 +194,14 @@ class RingDataReader:
 
     @property
     def spo2(self) -> SpO2Data:
-        """Blood oxygen saturation data with UTC timestamps if sync available."""
+        """Blood oxygen saturation data with UTC timestamps."""
         if self._spo2 is None:
             self._spo2 = SpO2Data()
             if self._rd.HasField('spo2_event'):
                 ev = self._rd.spo2_event
-                raw_timestamps = list(ev.timestamp)
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._spo2 = SpO2Data(
-                    timestamps=self._convert_timestamps(raw_timestamps),
+                    timestamps=list(ev.timestamp),
                     spo2_values=list(ev.spo2),
                     beat_indices=list(ev.beat_index),
                 )
@@ -282,21 +209,14 @@ class RingDataReader:
 
     @property
     def motion(self) -> MotionData:
-        """Motion/accelerometer data with UTC timestamps if sync available."""
+        """Motion/accelerometer data with UTC timestamps."""
         if self._motion is None:
             self._motion = MotionData()
             if self._rd.HasField('motion_event'):
                 ev = self._rd.motion_event
-
-                # Use parsed event timestamps if available
-                if self._parsed_events and self._parsed_events.motion_timestamps:
-                    timestamps = self._parsed_events.motion_timestamps
-                else:
-                    raw_timestamps = list(ev.timestamp)
-                    timestamps = self._convert_timestamps(raw_timestamps)
-
+                # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._motion = MotionData(
-                    timestamps=timestamps,
+                    timestamps=list(ev.timestamp),
                     orientation=list(ev.orientation),
                     motion_seconds=list(ev.motion_seconds),
                     average_x=list(ev.average_x),

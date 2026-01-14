@@ -48,7 +48,6 @@ app.add_middleware(
 # Global analyzer (loaded once) - provides high-level API
 INPUT_DIR = Path(__file__).parent.parent.parent / "input_data"
 DATA_FILE = INPUT_DIR / "ring_data.pb"
-EVENTS_FILE = INPUT_DIR / "ring_events.txt"
 _analyzer: Optional[OuraAnalyzer] = None
 _reader: Optional[RingDataReader] = None
 
@@ -73,15 +72,9 @@ def get_reader() -> RingDataReader:
         if not DATA_FILE.exists():
             raise HTTPException(status_code=404, detail=f"Data file not found: {DATA_FILE}")
 
-        # Use events file for real timestamps if available
-        if EVENTS_FILE.exists():
-            print(f"[Backend] Loading with real timestamps from {EVENTS_FILE.name}")
-            _reader = RingDataReader.from_events(str(DATA_FILE), str(EVENTS_FILE))
-            if _reader.has_sync:
-                print(f"[Backend] Time sync active - UTC timestamps enabled")
-        else:
-            print(f"[Backend] Events file not found, using relative timestamps")
-            _reader = RingDataReader(str(DATA_FILE))
+        # Protobuf has UTC timestamps from preprocessing
+        _reader = RingDataReader(str(DATA_FILE))
+        print(f"[Backend] Loaded {DATA_FILE.name}")
 
     return _reader
 
@@ -451,6 +444,70 @@ async def get_spo2(
     )
 
 
+# ============== Nights Browser ==============
+
+class NightInfo(BaseModel):
+    index: int
+    start_timestamp: int
+    end_timestamp: int
+    start_time: str
+    end_time: str
+    date: str
+    duration_hours: float
+
+
+class NightsResponse(BaseModel):
+    nights: List[NightInfo]
+    total: int
+    selected: int
+
+
+@app.get("/nights", response_model=NightsResponse)
+async def get_nights(selected: int = Query(default=-1, description="Selected night index (-1 = last)")):
+    """Get list of all available sleep nights (bedtime periods).
+
+    Returns all nights sorted by date with the selected one marked.
+    """
+    reader = get_reader()
+    rd = reader.raw
+
+    nights = []
+    if rd.HasField('bedtime_period'):
+        bp = rd.bedtime_period
+        # Get unique bedtime periods
+        periods = set()
+        for i in range(len(bp.bedtime_start)):
+            periods.add((bp.bedtime_start[i], bp.bedtime_end[i]))
+
+        sorted_periods = sorted(periods)
+
+        for idx, (start_ms, end_ms) in enumerate(sorted_periods):
+            start_dt = datetime.fromtimestamp(start_ms / 1000)
+            end_dt = datetime.fromtimestamp(end_ms / 1000)
+            duration = (end_ms - start_ms) / 1000 / 3600
+
+            nights.append(NightInfo(
+                index=idx,
+                start_timestamp=start_ms,
+                end_timestamp=end_ms,
+                start_time=start_dt.strftime("%H:%M"),
+                end_time=end_dt.strftime("%H:%M"),
+                date=start_dt.strftime("%Y-%m-%d"),
+                duration_hours=round(duration, 1),
+            ))
+
+    # Resolve selected index (-1 means last)
+    resolved_selected = selected
+    if selected == -1 and nights:
+        resolved_selected = len(nights) - 1
+
+    return NightsResponse(
+        nights=nights,
+        total=len(nights),
+        selected=resolved_selected,
+    )
+
+
 # ============== Dashboard Endpoints ==============
 
 class SleepDashboard(BaseModel):
@@ -469,14 +526,16 @@ class SleepDashboard(BaseModel):
 
 
 @app.get("/dashboard/sleep", response_model=SleepDashboard)
-async def get_sleep_dashboard():
+async def get_sleep_dashboard(
+    night: int = Query(default=-1, description="Night index (-1 = last/most recent)")
+):
     """Get sleep dashboard data using high-level SleepAnalyzer.
 
     Uses SleepAnalyzer which automatically handles ML inference when available.
     """
-    analyzer = get_analyzer()
-    sleep_analyzer = analyzer.sleep  # High-level API with ML support
-    raw_sleep = analyzer.raw.sleep  # Raw data for HR/HRV trends
+    reader = get_reader()
+    sleep_analyzer = SleepAnalyzer(reader, night_index=night)  # ML with night selection
+    raw_sleep = reader.sleep  # Raw data for HR/HRV trends
 
     # Get ML-aware stage durations
     durations = sleep_analyzer.stage_durations
@@ -675,7 +734,7 @@ async def get_hrv_dashboard():
         # Convert timestamp to readable time
         try:
             dt = datetime.fromtimestamp(ts / 1000)  # Convert ms to seconds
-            time_str = dt.strftime("%I:%M %p")
+            time_str = dt.strftime("%H:%M")
         except:
             time_str = f"Sample {i}"
 
@@ -711,6 +770,8 @@ class SleepScoreResponse(BaseModel):
 
 
 class SleepStagesDashboard(BaseModel):
+    night_index: int
+    night_date: str
     epochs: List[Dict[str, Any]]
     durations: Dict[str, float]
     hypnogram_data: List[Dict[str, Any]]
@@ -721,7 +782,9 @@ class SleepStagesDashboard(BaseModel):
 
 
 @app.get("/dashboard/sleep-stages", response_model=SleepStagesDashboard)
-async def get_sleep_stages_dashboard():
+async def get_sleep_stages_dashboard(
+    night: int = Query(default=-1, description="Night index (-1 = last/most recent)")
+):
     """Get detailed sleep stages data with timestamps for hypnogram.
 
     Uses the high-level SleepAnalyzer which automatically uses SleepNet ML
@@ -729,7 +792,7 @@ async def get_sleep_stages_dashboard():
     Timestamps come from ring_events.txt via time sync for real UTC times.
     """
     reader = get_reader()  # Reader with real UTC timestamps
-    sleep_analyzer = SleepAnalyzer(reader)  # Use reader with real timestamps
+    sleep_analyzer = SleepAnalyzer(reader, night_index=night)  # ML with night selection
 
     # Display stage mapping: 0=Deep, 1=Light, 2=REM, 3=Awake (for hypnogram Y-axis)
     # SleepAnalyzer returns: 0=Awake, 1=Light, 2=Deep, 3=REM
@@ -738,18 +801,18 @@ async def get_sleep_stages_dashboard():
     standard_to_display = {0: 3, 1: 1, 2: 0, 3: 2}  # awake→3, light→1, deep→0, rem→2
 
     print(f"[sleep-stages] Using ML: {sleep_analyzer.uses_ml}")
-    print(f"[sleep-stages] Has real timestamps: {reader.has_events}")
 
-    # Get stages from ML and real timestamps from events file
+    # Get stages AND timestamps from SleepAnalyzer (both from ML model)
+    # This ensures stages and timestamps are aligned (same source)
     stages = sleep_analyzer.stages
+    ml_timestamps = sleep_analyzer.timestamps  # Unix seconds from SleepNet
 
-    # Use timestamps from reader's sleep data (real UTC from events file)
-    sleep_timestamps = reader.sleep.timestamps
+    # Convert ML timestamps (seconds) to milliseconds for API
+    sleep_timestamps = [int(ts * 1000) for ts in ml_timestamps]
     epochs = []
 
-    # Use minimum of ML stages and real timestamps to ensure we have valid data
-    n_epochs = min(len(stages), len(sleep_timestamps)) if sleep_timestamps else len(stages)
-    print(f"[sleep-stages] ML epochs: {len(stages)}, Real timestamps: {len(sleep_timestamps)}, Using: {n_epochs}")
+    n_epochs = len(stages)
+    print(f"[sleep-stages] ML epochs: {n_epochs}, timestamps: {len(sleep_timestamps)}")
 
     # Calculate time increment for interpolating missing timestamps
     if sleep_timestamps and len(sleep_timestamps) >= 2:
@@ -774,7 +837,7 @@ async def get_sleep_stages_dashboard():
         # Convert Unix timestamp to readable time
         try:
             dt = datetime.fromtimestamp(ts_sec)
-            time_str = dt.strftime("%I:%M %p")
+            time_str = dt.strftime("%H:%M")
         except:
             time_str = f"Epoch {i}"
 
@@ -788,15 +851,18 @@ async def get_sleep_stages_dashboard():
             "color": stage_colors.get(display_stage, "#gray"),
         })
 
-    # Get bedtime window from real timestamps
+    # Get bedtime window from ML timestamps (aligned with stages)
     bedtime_start_str = ""
     bedtime_end_str = ""
-    if sleep_timestamps and len(sleep_timestamps) > 0:
-        start_dt = datetime.fromtimestamp(sleep_timestamps[0] / 1000)
-        end_dt = datetime.fromtimestamp(sleep_timestamps[-1] / 1000)
-        bedtime_start_str = start_dt.strftime("%I:%M %p")
-        bedtime_end_str = end_dt.strftime("%I:%M %p")
-        print(f"[sleep-stages] Bedtime: {bedtime_start_str} - {bedtime_end_str}")
+    night_date_str = ""
+    if len(ml_timestamps) > 0:
+        start_dt = datetime.fromtimestamp(ml_timestamps[0])
+        end_dt = datetime.fromtimestamp(ml_timestamps[-1])
+        bedtime_start_str = start_dt.strftime("%H:%M")
+        bedtime_end_str = end_dt.strftime("%H:%M")
+        night_date_str = start_dt.strftime("%Y-%m-%d")
+        duration_hours = (ml_timestamps[-1] - ml_timestamps[0]) / 3600
+        print(f"[sleep-stages] Night {night}: {night_date_str} {bedtime_start_str} - {bedtime_end_str} ({duration_hours:.1f}h)")
 
     # Get stage durations from analyzer (automatically uses ML)
     stage_durations = sleep_analyzer.stage_durations
@@ -851,6 +917,8 @@ async def get_sleep_stages_dashboard():
     print(f"[sleep-stages] Score: {sleep_score.score}")
 
     return SleepStagesDashboard(
+        night_index=night,
+        night_date=night_date_str,
         epochs=epochs,
         durations=durations,
         hypnogram_data=hypnogram_data,
@@ -913,6 +981,9 @@ async def ble_websocket(websocket: WebSocket):
 
             elif action == "factory-reset":
                 await ble_manager.factory_reset()
+
+            elif action == "parse":
+                await ble_manager.parse_events()
 
             else:
                 await websocket.send_json({

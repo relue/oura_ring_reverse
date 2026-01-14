@@ -57,18 +57,35 @@ class TimeSyncInfo(NamedTuple):
         return event_utc_ms / 1000.0
 
 
+@dataclass
+class CorrectedIBI:
+    """Corrected IBI data from EcoreWrapper.
+
+    Matches Oura's IbiAndAmplitudeEvent.Corrected exactly:
+    - timestamp_ms: UTC milliseconds
+    - ibi_ms: Inter-beat interval (CORRECTED by EcoreWrapper)
+    - amplitude: Amplitude value (CORRECTED by EcoreWrapper)
+    - validity: 0=Unknown, 1=Valid, 2=Interpolated
+    """
+    timestamp_ms: int
+    ibi_ms: int
+    amplitude: int
+    validity: int
+
+
 def _check_ecore():
-    """Check if EcoreWrapper is available."""
+    """Check if EcoreWrapper is available (REQUIRED for SleepNet)."""
     global _ECORE_AVAILABLE
     if _ECORE_AVAILABLE is None:
         try:
             from oura_ecore import EcoreWrapper
             ecore = EcoreWrapper()
             _ECORE_AVAILABLE = True
-            print("[SleepNet] EcoreWrapper available - using native IBI correction")
+            print("[SleepNet] EcoreWrapper available - native IBI correction enabled")
         except Exception as e:
             _ECORE_AVAILABLE = False
-            print(f"[SleepNet] EcoreWrapper not available ({e}) - using simple validity check")
+            print(f"[SleepNet] WARNING: EcoreWrapper not available ({e})")
+            print("[SleepNet] EcoreWrapper is REQUIRED for 1:1 match with Oura app")
     return _ECORE_AVAILABLE
 
 
@@ -125,7 +142,8 @@ class SleepNetModel:
         time_sync: Optional[TimeSyncInfo] = None,
         user_age: float = 37.0,
         user_weight_kg: float = 88.0,
-        user_sex: str = "male"
+        user_sex: str = "male",
+        night_index: int = -1
     ) -> SleepNetResult:
         """
         Predict sleep stages from RingDataReader.
@@ -137,6 +155,8 @@ class SleepNetModel:
             user_age: User's age in years
             user_weight_kg: User's weight in kg
             user_sex: "male", "female", or "other"
+            night_index: Which night to analyze if multiple bedtime periods exist.
+                        -1 = most recent (last), 0 = first, etc.
 
         Returns:
             SleepNetResult with sleep stages and statistics
@@ -154,24 +174,34 @@ class SleepNetModel:
             reference_time = time.time()
 
         # ===== BEDTIME INPUT =====
-        # Try to get from BedtimePeriod protobuf first, otherwise derive from epochs
-        bedtime_start, bedtime_end = self._get_bedtime(reader, reference_time)
+        # Get bedtime from BedtimePeriod protobuf (selects specific night if multiple)
+        bedtime_start, bedtime_end = self._get_bedtime(reader, reference_time, night_index)
         sleep_duration_sec = bedtime_end - bedtime_start
 
         print(f"[SleepNet] Bedtime window: {sleep_duration_sec/3600:.1f} hours")
 
         # ===== IBI INPUT =====
         # Shape: [N, 4] - [timestamp_sec, ibi_ms, amplitude, validity]
-        ibi_input = self._build_ibi_input(
-            hr, bedtime_start, bedtime_end, time_sync
+        # All values from EcoreWrapper (1:1 match with Oura app - no fallbacks)
+        # CRITICAL: Filter to bedtime period BEFORE EcoreWrapper (prevents 100K limit issues)
+        amplitudes = hr.amplitudes if hasattr(hr, 'amplitudes') and hr.amplitudes else None
+        timestamps = hr.timestamps if hr.timestamps else None
+
+        # Get corrected IBI data from EcoreWrapper (REQUIRED - must succeed)
+        corrected_ibi = self._get_corrected_ibi_data(
+            hr, amplitudes, timestamps, bedtime_start, bedtime_end
         )
+
+        # Build IBI input tensor from corrected data
+        ibi_input = self._build_ibi_input(corrected_ibi)
         print(f"[SleepNet] IBI input: {ibi_input.shape[0]} samples")
 
         # ===== ACM INPUT =====
         # Shape: [M, 2] - [timestamp_sec, motion_seconds]
-        # CRITICAL: Use motion.motion_seconds (0-30 range), NOT sleep.motion_count
+        # CRITICAL: Use raw protobuf motion_event (aligned timestamps + motion_seconds)
+        # NOT reader.motion which mixes sources (events file timestamps + protobuf motion_seconds)
         acm_input = self._build_acm_input(
-            motion, sleep, bedtime_start, bedtime_end
+            reader, bedtime_start, bedtime_end
         )
         print(f"[SleepNet] ACM input: {acm_input.shape[0]} samples")
 
@@ -211,192 +241,221 @@ class SleepNetModel:
             scalars_input=scalars_input
         )
 
-    def _get_bedtime(self, reader, reference_time: float) -> Tuple[float, float]:
+    def _get_bedtime(self, reader, reference_time: float, night_index: int = -1) -> Tuple[float, float]:
         """Extract bedtime from BedtimePeriod or derive from available data.
 
+        Args:
+            reader: RingDataReader instance
+            reference_time: Unix timestamp (seconds) as reference
+            night_index: Which night to select if multiple are available.
+                        -1 = most recent (last), 0 = first, etc.
+
         Priority:
-        1. BedtimePeriod from protobuf (if available)
-        2. IBI total duration (most accurate representation of sleep period)
-        3. Sleep epoch count * 30 seconds
-        4. Default 8 hours
+        1. BedtimePeriod from protobuf (if available) - select specific night
+        2. IBI timestamps range (actual data period)
+        3. Default 8 hours from reference_time
         """
         # Try to get from protobuf BedtimePeriod
         try:
-            import ringeventparser_pb2 as pb
             # Access raw protobuf if available
-            if hasattr(reader, '_raw_data'):
-                rd = reader._raw_data
+            if hasattr(reader, 'raw'):
+                rd = reader.raw
                 if rd.HasField('bedtime_period'):
                     bp = rd.bedtime_period
                     if bp.bedtime_start and bp.bedtime_end:
-                        # Convert from milliseconds to seconds
-                        start_ms = bp.bedtime_start[0]
-                        end_ms = bp.bedtime_end[0]
-                        if start_ms > 0 and end_ms > 0:
-                            print("[SleepNet] Using BedtimePeriod from protobuf")
-                            return start_ms / 1000.0, end_ms / 1000.0
+                        # Get unique bedtime periods
+                        periods = set()
+                        for i in range(len(bp.bedtime_start)):
+                            periods.add((bp.bedtime_start[i], bp.bedtime_end[i]))
+
+                        if periods:
+                            sorted_periods = sorted(periods)  # Sort by start time
+                            import datetime
+
+                            print(f"[SleepNet] Found {len(sorted_periods)} unique bedtime period(s):")
+                            for i, (s, e) in enumerate(sorted_periods):
+                                s_dt = datetime.datetime.fromtimestamp(s / 1000)
+                                e_dt = datetime.datetime.fromtimestamp(e / 1000)
+                                dur_h = (e - s) / 1000 / 3600
+                                marker = " <-- SELECTED" if (i == night_index or (night_index == -1 and i == len(sorted_periods) - 1)) else ""
+                                print(f"  Night {i+1}: {s_dt.strftime('%Y-%m-%d %H:%M')} to {e_dt.strftime('%H:%M')} ({dur_h:.1f}h){marker}")
+
+                            # Select the requested night
+                            selected = sorted_periods[night_index]
+                            start_ms, end_ms = selected
+
+                            if start_ms > 0 and end_ms > 0:
+                                return start_ms / 1000.0, end_ms / 1000.0
         except Exception as e:
-            pass  # Fall through to derivation
+            print(f"[SleepNet] Warning: Could not read BedtimePeriod: {e}")
 
-        # Try IBI total duration (ring only sends sleep-period IBI data)
+        # Fallback: Use IBI timestamp range (if available)
         hr = reader.heart_rate
-        if hr.ibi_ms and len(hr.ibi_ms) > 0:
-            total_ibi_ms = sum(hr.ibi_ms)
-            ibi_duration_sec = total_ibi_ms / 1000.0
-            if ibi_duration_sec > 1800:  # At least 30 minutes
-                bedtime_end = reference_time
-                bedtime_start = reference_time - ibi_duration_sec
-                print(f"[SleepNet] Derived bedtime from IBI total: {ibi_duration_sec/3600:.2f} hours")
-                return bedtime_start, bedtime_end
+        if hr.timestamps and len(hr.timestamps) > 0:
+            first_ts = hr.timestamps[0] / 1000.0  # ms to sec
+            last_ts = hr.timestamps[-1] / 1000.0
+            if last_ts - first_ts > 1800:  # At least 30 minutes
+                print(f"[SleepNet] Derived bedtime from IBI timestamps: {(last_ts-first_ts)/3600:.2f} hours")
+                return first_ts, last_ts
 
-        # Derive from sleep epoch count (30 seconds per epoch)
-        sleep = reader.sleep
-        n_epochs = len(sleep.sleep_state) if hasattr(sleep, 'sleep_state') and sleep.sleep_state else 0
-
-        if n_epochs > 0:
-            sleep_duration_sec = n_epochs * 30  # 30 seconds per epoch
-            bedtime_end = reference_time
-            bedtime_start = reference_time - sleep_duration_sec
-            print(f"[SleepNet] Derived bedtime from {n_epochs} sleep epochs: {sleep_duration_sec/3600:.2f} hours")
-        else:
-            # Default to 8 hours
-            bedtime_end = reference_time
-            bedtime_start = reference_time - 8 * 3600
-            print("[SleepNet] Using default 8-hour bedtime window")
+        # Default to 8 hours from reference time
+        bedtime_end = reference_time
+        bedtime_start = reference_time - 8 * 3600
+        print("[SleepNet] Using default 8-hour bedtime window")
 
         return bedtime_start, bedtime_end
 
-    def _build_ibi_input(
-        self,
-        hr,
-        bedtime_start: float,
-        bedtime_end: float,
-        time_sync: Optional[TimeSyncInfo]
-    ) -> torch.Tensor:
-        """Build IBI input tensor.
+    def _build_ibi_input(self, corrected_data: List[CorrectedIBI]) -> torch.Tensor:
+        """Build IBI input tensor from EcoreWrapper corrected data.
+
+        This matches Oura's model input construction exactly (verified from
+        SleepNetBdiPyTorchModel.java line 133):
+        - timestamp: corrected.timestamp / 1000.0 (ms → seconds)
+        - ibi: corrected.ibi (direct cast to double)
+        - amplitude: corrected.amplitude (direct cast to double)
+        - validity: corrected.validity (direct cast - RAW value 0/1/2)
 
         Format: [N, 4] - [timestamp_sec, ibi_ms, amplitude, validity]
         """
+        if not corrected_data:
+            raise RuntimeError("No corrected IBI data - cannot build model input")
+
         ibi_data = []
-        n_ibi = len(hr.ibi_ms) if hr.ibi_ms else 0
-        amplitudes = hr.amplitudes if hasattr(hr, 'amplitudes') and hr.amplitudes else None
-        raw_timestamps = hr.timestamps if hr.timestamps else None
+        for c in corrected_data:
+            # Exact Oura conversion: timestamp / 1000.0d (ms → seconds)
+            ts_sec = c.timestamp_ms / 1000.0
 
-        if n_ibi == 0:
-            # Minimal placeholder
-            return torch.tensor([
-                [bedtime_start, 800.0, 10000.0, 1.0],
-                [bedtime_end, 800.0, 10000.0, 1.0]
-            ], dtype=torch.float64)
+            # Direct cast to double (no scaling)
+            ibi = float(c.ibi_ms)
+            amp = float(c.amplitude)
 
-        # Compute validity using EcoreWrapper or fallback
-        validity_map = self._compute_ibi_validity(hr, amplitudes, raw_timestamps)
+            # Validity: RAW value (0=Unknown, 1=Valid, 2=Interpolated)
+            # Oura app: Double.valueOf(it.f61139d) - direct cast, no mapping
+            validity = float(c.validity)
 
-        # Build timestamps
-        if time_sync and raw_timestamps:
-            # Use TIME_SYNC_IND conversion (proper method)
-            print("[SleepNet] Using TIME_SYNC_IND for IBI timestamps")
-            for i in range(n_ibi):
-                ring_time = raw_timestamps[i]
-                ts_sec = time_sync.ring_time_to_utc_sec(ring_time)
-                ibi = float(hr.ibi_ms[i])
-                amp = float(amplitudes[i]) if amplitudes and i < len(amplitudes) else 10000.0
-                validity = validity_map.get(i, 1.0 if 300 <= ibi <= 2000 else 0.0)
-                ibi_data.append([ts_sec, ibi, amp, validity])
-        else:
-            # Build continuous timestamps from IBI values
-            # Ring data is organized in 6-sample chunks with discontinuous timestamps
-            # We ignore the ring timestamps and build our own from cumulative IBI
-            print("[SleepNet] Building timestamps from IBI values (continuous)")
+            ibi_data.append([ts_sec, ibi, amp, validity])
 
-            # Calculate total IBI duration
-            total_ibi_ms = sum(hr.ibi_ms)
-            total_ibi_sec = total_ibi_ms / 1000.0
-
-            # Scale factor to fit IBI data within bedtime window
-            sleep_duration = bedtime_end - bedtime_start
-            if total_ibi_sec > 0 and sleep_duration > 0:
-                scale = sleep_duration / total_ibi_sec
-            else:
-                scale = 1.0
-
-            print(f"[SleepNet] IBI duration: {total_ibi_sec/3600:.2f}h, "
-                  f"Bedtime: {sleep_duration/3600:.2f}h, scale: {scale:.3f}")
-
-            # Build continuous timestamps - each IBI advances by its duration
-            ts_sec = bedtime_start
-            for i in range(n_ibi):
-                ibi = float(hr.ibi_ms[i])
-                amp = float(amplitudes[i]) if amplitudes and i < len(amplitudes) else 10000.0
-                validity = validity_map.get(i, 1.0 if 300 <= ibi <= 2000 else 0.0)
-                ibi_data.append([ts_sec, ibi, amp, validity])
-                # Advance by scaled IBI duration
-                ts_sec += (ibi / 1000.0) * scale
+        # Log sample and range
+        if len(ibi_data) >= 2:
+            ts_start = ibi_data[0][0]
+            ts_end = ibi_data[-1][0]
+            print(f"[SleepNet] Model IBI input (all values from EcoreWrapper):")
+            print(f"  [0] ts={ibi_data[0][0]:.3f}s, ibi={ibi_data[0][1]:.0f}ms, amp={ibi_data[0][2]:.0f}, valid={ibi_data[0][3]}")
+            print(f"  [-1] ts={ibi_data[-1][0]:.3f}s, ibi={ibi_data[-1][1]:.0f}ms, amp={ibi_data[-1][2]:.0f}, valid={ibi_data[-1][3]}")
+            print(f"  Range: {ts_end - ts_start:.1f}s ({(ts_end - ts_start)/3600:.2f}h)")
 
         return torch.tensor(ibi_data, dtype=torch.float64)
 
-    def _compute_ibi_validity(
+    def _get_corrected_ibi_data(
         self,
         hr,
         amplitudes: Optional[List],
-        timestamps: Optional[List]
-    ) -> Dict[int, float]:
-        """Compute IBI validity using EcoreWrapper or fallback."""
-        validity_map = {}
+        timestamps: Optional[List],
+        bedtime_start: float,
+        bedtime_end: float
+    ) -> List[CorrectedIBI]:
+        """Get corrected IBI data from EcoreWrapper (REQUIRED - no fallback).
+
+        This matches Oura's IbiAndAmplitudeEventExtKt.correctIbiAndAmplitudeEvents().
+        EcoreWrapper MUST succeed - RuntimeError raised if not available.
+
+        CRITICAL: Filters IBI data to bedtime period BEFORE calling EcoreWrapper.
+        This prevents hitting the 100K sample limit with multi-night data.
+
+        Args:
+            hr: HeartRate data with ibi_ms
+            amplitudes: Raw amplitude values
+            timestamps: UTC timestamps in milliseconds from reader.py
+            bedtime_start: Bedtime start in UTC seconds
+            bedtime_end: Bedtime end in UTC seconds
+
+        Returns:
+            List of CorrectedIBI with all corrected values from EcoreWrapper
+        """
+        if not _check_ecore():
+            raise RuntimeError(
+                "EcoreWrapper required but not available. "
+                "Install qemu-aarch64 and ensure android_root is set up."
+            )
+
+        from oura_ecore import EcoreWrapper
+        ecore = EcoreWrapper()
+
         n_ibi = len(hr.ibi_ms)
+        if n_ibi == 0:
+            raise RuntimeError("No IBI data available - cannot proceed")
 
-        # Try native EcoreWrapper
-        if _check_ecore():
-            try:
-                from oura_ecore import EcoreWrapper
-                ecore = EcoreWrapper()
+        # Convert bedtime to milliseconds for filtering
+        bedtime_start_ms = bedtime_start * 1000.0
+        bedtime_end_ms = bedtime_end * 1000.0
 
-                # Prepare data - use millisecond timestamps for native lib
-                raw_ibi_data = []
-                for i in range(n_ibi):
-                    # EcoreWrapper expects (timestamp_ms, ibi_ms, amplitude)
-                    ts_ms = timestamps[i] * 100 if timestamps and i < len(timestamps) else i * 1000
-                    ibi = hr.ibi_ms[i]
-                    amp = amplitudes[i] if amplitudes and i < len(amplitudes) else 10000
-                    raw_ibi_data.append((ts_ms, ibi, amp))
+        # Build raw IBI data, FILTERING to bedtime period (like Oura's MotionEventExtKt)
+        # NO SCALING - original app passes raw values directly (verified from gp/a.java)
+        raw_ibi_data = []
+        filtered_count = 0
+        for i in range(n_ibi):
+            ibi = hr.ibi_ms[i]
 
-                # Run native IBI correction
-                corrected = ecore.correct_ibi(raw_ibi_data)
+            # Use actual UTC timestamps from reader.py
+            if timestamps and i < len(timestamps):
+                ts_ms = int(timestamps[i])
+            else:
+                # Build cumulative if timestamps missing (shouldn't happen with proper reader)
+                if i == 0:
+                    ts_ms = timestamps[0] if timestamps else 0
+                else:
+                    if raw_ibi_data:
+                        ts_ms = raw_ibi_data[-1][0] + raw_ibi_data[-1][1]
+                    else:
+                        continue  # Skip if we can't determine timestamp
 
-                # Map validity: native 0=Valid→1.0, native 1/2=Invalid→0.0
-                valid_count = 0
-                for i, result in enumerate(corrected):
-                    validity_map[i] = 1.0 if result.validity == 0 else 0.0
-                    if result.validity == 0:
-                        valid_count += 1
+            # Filter to bedtime period (like Oura's MotionEventExtKt.motionEvents)
+            if bedtime_start_ms <= ts_ms <= bedtime_end_ms:
+                # Raw amplitude - no scaling (verified from gp/a.java line 31)
+                amp = int(amplitudes[i]) if amplitudes and i < len(amplitudes) else 200
+                raw_ibi_data.append((ts_ms, ibi, amp))
+            else:
+                filtered_count += 1
 
-                valid_pct = valid_count / len(corrected) * 100 if corrected else 0
-                print(f"[SleepNet] EcoreWrapper: {valid_count}/{len(corrected)} valid ({valid_pct:.1f}%)")
+        # Log input summary
+        if not raw_ibi_data:
+            raise RuntimeError(f"No IBI data within bedtime period. Checked {n_ibi} samples.")
 
-                # If too few valid, fall back to simple check
-                if valid_pct < 20:
-                    print("[SleepNet] Warning: EcoreWrapper marked <20% valid, using fallback")
-                    validity_map = {}  # Clear and use fallback
+        print(f"[SleepNet] EcoreWrapper input: {len(raw_ibi_data)} samples (filtered {filtered_count} outside bedtime)")
+        print(f"  First: ts={raw_ibi_data[0][0]}ms, ibi={raw_ibi_data[0][1]}ms, amp={raw_ibi_data[0][2]}")
+        print(f"  Last:  ts={raw_ibi_data[-1][0]}ms, ibi={raw_ibi_data[-1][1]}ms, amp={raw_ibi_data[-1][2]}")
 
-            except Exception as e:
-                print(f"[SleepNet] EcoreWrapper failed: {e}, using fallback")
+        # Run native IBI correction (must succeed)
+        corrected_results = ecore.correct_ibi(raw_ibi_data)
 
-        # Fallback: simple physiological range check
-        if not validity_map:
-            for i in range(n_ibi):
-                ibi = hr.ibi_ms[i]
-                # Valid range: 300-2000ms = 30-200 BPM
-                validity_map[i] = 1.0 if 300 <= ibi <= 2000 else 0.0
+        if not corrected_results:
+            raise RuntimeError("EcoreWrapper returned no corrected results")
 
-            valid_count = sum(1 for v in validity_map.values() if v == 1.0)
-            print(f"[SleepNet] Fallback validity: {valid_count}/{n_ibi} valid")
+        # Convert to CorrectedIBI list (keeping ALL corrected values)
+        corrected_data = [
+            CorrectedIBI(
+                timestamp_ms=r.timestamp,
+                ibi_ms=r.ibi,
+                amplitude=r.amplitude,
+                validity=r.validity
+            )
+            for r in corrected_results
+        ]
 
-        return validity_map
+        # Log output summary
+        valid_count = sum(1 for c in corrected_data if c.validity == 1)
+        valid_pct = valid_count / len(corrected_data) * 100
+        print(f"[SleepNet] EcoreWrapper output: {len(corrected_data)} corrected samples")
+        print(f"  Valid: {valid_count}/{len(corrected_data)} ({valid_pct:.1f}%)")
+
+        if valid_pct < 50:
+            print(f"[SleepNet] Warning: Low validity percentage ({valid_pct:.1f}%)")
+
+        return corrected_data
 
     def _build_acm_input(
         self,
-        motion,
-        sleep,
+        reader,
         bedtime_start: float,
         bedtime_end: float
     ) -> torch.Tensor:
@@ -404,39 +463,52 @@ class SleepNetModel:
 
         Format: [M, 2] - [timestamp_sec, motion_seconds]
 
-        IMPORTANT: Use motion.motion_seconds (0-30 range) as primary source.
-        This matches the Oura app which uses MotionEvent.motion_seconds.
+        1:1 MATCH WITH OURA MOONSTONE:
+        - Uses raw protobuf motion_event (timestamps + motion_seconds are aligned)
+        - Filters to bedtime period (like Oura's MotionEventExtKt.motionEvents)
+        - Converts timestamp_ms / 1000.0 to seconds (like IBI)
+
+        Reference: com/ouraring/ringeventparser/message/MotionEvent.java
+        - timestamp: long (milliseconds)
+        - motionSeconds: int (0-29 range from ring)
+
+        IMPORTANT: Use reader.raw.motion_event directly, NOT reader.motion
+        The reader.motion mixes sources (events file timestamps + protobuf motion_seconds)
+        which causes misalignment.
         """
         acm_data = []
-        sleep_duration = bedtime_end - bedtime_start
 
-        # PRIMARY: Use motion.motion_seconds (correct per decompiled app)
-        if hasattr(motion, 'motion_seconds') and motion.motion_seconds and len(motion.motion_seconds) > 0:
-            n_motion = len(motion.motion_seconds)
-            motion_interval = sleep_duration / n_motion
+        # PRIMARY: Use raw protobuf motion_event (1:1 with Oura Moonstone)
+        rd = reader.raw
+        if rd.HasField('motion_event'):
+            me = rd.motion_event
+            timestamps = list(me.timestamp)
+            motion_seconds = list(me.motion_seconds)
 
-            for i in range(n_motion):
-                ts_sec = bedtime_start + i * motion_interval
-                # motion_seconds is in range 0-30 (seconds of motion per epoch)
-                val = min(float(motion.motion_seconds[i]), 30.0)
-                acm_data.append([ts_sec, val])
+            n_samples = min(len(timestamps), len(motion_seconds))
 
-            mean_val = sum(motion.motion_seconds) / n_motion
-            print(f"[SleepNet] Using motion.motion_seconds: mean={mean_val:.1f}")
+            if n_samples > 0:
+                # Convert bedtime to ms for comparison
+                bedtime_start_ms = bedtime_start * 1000.0
+                bedtime_end_ms = bedtime_end * 1000.0
 
-        # FALLBACK: Use sleep.motion_count if motion_seconds not available
-        elif hasattr(sleep, 'motion_count') and sleep.motion_count and len(sleep.motion_count) > 0:
-            n_motion = len(sleep.motion_count)
-            motion_interval = sleep_duration / n_motion
+                # Filter motion events to bedtime period (like Oura's indexOfFirstAndLastOrNull)
+                for i in range(n_samples):
+                    ts_ms = timestamps[i]
 
-            for i in range(n_motion):
-                ts_sec = bedtime_start + i * motion_interval
-                # motion_count may need scaling to 0-30 range
-                val = min(float(sleep.motion_count[i]), 30.0)
-                acm_data.append([ts_sec, val])
+                    # Filter to bedtime period
+                    if bedtime_start_ms <= ts_ms <= bedtime_end_ms:
+                        # Oura conversion: timestamp_ms / 1000.0 → seconds
+                        ts_sec = ts_ms / 1000.0
+                        # Direct cast to double (like IBI)
+                        val = float(motion_seconds[i])
+                        acm_data.append([ts_sec, val])
 
-            mean_val = sum(sleep.motion_count) / n_motion
-            print(f"[SleepNet] Using sleep.motion_count (fallback): mean={mean_val:.1f}")
+                if acm_data:
+                    mean_val = sum(d[1] for d in acm_data) / len(acm_data)
+                    max_val = max(d[1] for d in acm_data)
+                    print(f"[SleepNet] ACM from protobuf motion_event: {len(acm_data)} samples "
+                          f"(filtered from {n_samples}), mean={mean_val:.1f}, max={max_val:.0f}")
 
         # Minimal placeholder if no motion data
         if not acm_data:

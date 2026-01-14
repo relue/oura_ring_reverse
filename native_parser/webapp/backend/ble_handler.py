@@ -278,6 +278,12 @@ class BLEConnectionManager:
             self.client.save_sync_point()
             self.client.save_events_to_file()
 
+            # Clear cached reader so dashboard uses fresh data
+            import main
+            main._analyzer = None
+            main._reader = None
+            await self.send_log("info", "Data cache refreshed")
+
             await self.broadcast({
                 "type": "complete",
                 "action": "get-data",
@@ -405,6 +411,62 @@ class BLEConnectionManager:
             return success
         except Exception as e:
             await self.send_log("error", f"Factory reset error: {e}")
+            return False
+        finally:
+            self.is_busy = False
+            self.current_action = None
+            await self.send_status()
+
+    async def parse_events(self) -> bool:
+        """Parse events file to protobuf using native parser."""
+        if self.is_busy:
+            await self.send_log("error", "Operation in progress")
+            return False
+
+        self.is_busy = True
+        self.current_action = "parse"
+        await self.send_status()
+
+        try:
+            from oura.native.parser import parse_events_async, check_parser_available
+
+            # Check parser available
+            available, msg = check_parser_available()
+            if not available:
+                await self.send_log("error", f"Parser not available: {msg}")
+                return False
+
+            await self.send_log("info", "Starting native parser (QEMU)...")
+
+            # Run parser with log callback
+            def log_callback(level: str, message: str):
+                asyncio.create_task(self.send_log(level, message))
+
+            result = await parse_events_async(log_callback=log_callback)
+
+            if result.success:
+                await self.send_log("success",
+                    f"Parsed {result.input_events} events -> {result.output_size} bytes")
+
+                # Clear cached reader so dashboard uses fresh data
+                import main
+                main._analyzer = None
+                main._reader = None
+                await self.send_log("info", "Data cache refreshed")
+
+            await self.broadcast({
+                "type": "complete",
+                "action": "parse",
+                "success": result.success,
+                "input_events": result.input_events,
+                "output_size": result.output_size,
+                "duration": result.duration_sec,
+                "error": result.error
+            })
+
+            return result.success
+        except Exception as e:
+            await self.send_log("error", f"Parse error: {e}")
             return False
         finally:
             self.is_busy = False

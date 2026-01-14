@@ -4,7 +4,7 @@
 Uses the unified oura_ring_data library for type-safe parsing and analysis.
 
 Usage:
-    python decode_ringdata.py [ring_data.pb] [--json] [--csv output_dir]
+    python decode_ringdata.py [ring_data.pb] [--json]
 """
 
 import sys
@@ -22,15 +22,12 @@ def main():
 Examples:
     python decode_ringdata.py ring_data.pb
     python decode_ringdata.py ring_data.pb --json
-    python decode_ringdata.py ring_data.pb --csv ./output
 """
     )
     parser.add_argument('pb_file', nargs='?', default='ring_data.pb',
                         help='Path to protobuf file (default: ring_data.pb)')
     parser.add_argument('--json', action='store_true',
                         help='Output as JSON')
-    parser.add_argument('--csv', metavar='DIR',
-                        help='Export CSV files to directory')
 
     args = parser.parse_args()
 
@@ -50,11 +47,6 @@ Examples:
     # Output format
     if args.json:
         print(reader.to_json())
-    elif args.csv:
-        outputs = reader.to_csv(args.csv)
-        print(f"Exported CSV files to {args.csv}:", file=sys.stderr)
-        for name, path in outputs.items():
-            print(f"  {name}: {path}", file=sys.stderr)
     else:
         print(reader.summary())
 
@@ -63,7 +55,6 @@ Examples:
         print("RAW PROTOBUF ACCESS:")
         print("=" * 60)
         print(f"Fields: {', '.join(reader.fields_present[:10])}{'...' if len(reader.fields_present) > 10 else ''}")
-
 
 
 if __name__ == '__main__':

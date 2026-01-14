@@ -26,9 +26,24 @@ liblog.so: bionic_stub.c
 libc_stub.so: libc_stub.c
 	$(CC) -shared -fPIC -o $@ $<
 
-# Build the parser bridge
+# Build the parser bridge (glibc version - for testing only)
 parser_bridge: parser_bridge.c
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+# Android NDK settings
+NDK_PATH ?= $(HOME)/Android/Sdk/ndk/29.0.14206865
+NDK_CLANG = $(NDK_PATH)/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang
+
+# Build parser_bridge_android with Android NDK (required for QEMU + android_root)
+# This links against Android bionic libc, not glibc
+parser_bridge_android: parser_bridge.c
+	@if [ ! -f "$(NDK_CLANG)" ]; then \
+		echo "ERROR: Android NDK not found at $(NDK_PATH)"; \
+		echo "Install NDK or set NDK_PATH=<path>"; \
+		exit 1; \
+	fi
+	$(NDK_CLANG) -Wall -O2 $< -o $@ -ldl
+	@echo "Built $@ with Android NDK"
 
 # Build IBI correction bridge (uses libappecore.so)
 ibi_correction_bridge: ibi_correction_bridge.c
