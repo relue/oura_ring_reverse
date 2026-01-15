@@ -46,20 +46,25 @@ class RingDataReader:
         print(reader.summary())
     """
 
-    def __init__(self, pb_path: str, sync_point: Optional[Union[SyncPoint, str, Path]] = 'auto'):
+    def __init__(self, pb_path: str, sync_point: Optional[Union[SyncPoint, str, Path]] = None, dedup: bool = True):
         """Load and parse protobuf file.
 
         Args:
             pb_path: Path to the ring_data.pb file
             sync_point: Time sync for converting ring timestamps to UTC.
-                       - 'auto': Auto-detect sync_point.json (default)
+                       - None: Don't convert timestamps (default)
+                       - 'auto': Auto-detect sync_point.json
                        - SyncPoint instance: Use directly
                        - str/Path: Load from file
-                       - None: Don't convert timestamps
+            dedup: If True, deduplicate and sort protobuf data (handles raw batch duplicates)
         """
         self._path = Path(pb_path)
         self._rd = proto.RingData()
         self._rd.ParseFromString(self._path.read_bytes())
+
+        # Dedup and sort protobuf data (handles duplicate batches in raw event files)
+        if dedup:
+            self._dedup_protobuf()
 
         # Load sync point
         if sync_point == 'auto':
@@ -80,6 +85,108 @@ class RingDataReader:
         self._spo2: Optional[SpO2Data] = None
         self._motion: Optional[MotionData] = None
         self._ring_info: Optional[RingInfo] = None
+
+    def _dedup_protobuf(self):
+        """Deduplicate and sort protobuf data.
+
+        Raw event files can contain duplicate batches from multiple syncs.
+        This removes duplicates (by timestamp) and sorts chronologically.
+        """
+        rd = self._rd
+        stats = {}
+
+        # Dedup IBI data (timestamp, ibi, amp)
+        if rd.HasField('ibi_and_amplitude_event'):
+            ibi = rd.ibi_and_amplitude_event
+            before = len(ibi.timestamp)
+            if before > 0:
+                # Build tuples and dedup by (timestamp, ibi)
+                data = list(zip(ibi.timestamp, ibi.ibi, ibi.amp))
+                seen = set()
+                deduped = []
+                for row in data:
+                    key = (row[0], row[1])  # (timestamp, ibi)
+                    if key not in seen:
+                        seen.add(key)
+                        deduped.append(row)
+                # Sort by timestamp
+                deduped.sort(key=lambda x: x[0])
+                # Write back
+                if len(deduped) < before:
+                    del ibi.timestamp[:]
+                    del ibi.ibi[:]
+                    del ibi.amp[:]
+                    for ts, ib, am in deduped:
+                        ibi.timestamp.append(ts)
+                        ibi.ibi.append(ib)
+                        ibi.amp.append(am)
+                    stats['ibi'] = (before, len(deduped))
+
+        # Dedup motion data
+        if rd.HasField('motion_event'):
+            me = rd.motion_event
+            before = len(me.timestamp)
+            if before > 0:
+                # Build tuples with all fields
+                data = list(zip(
+                    me.timestamp, me.orientation, me.motion_seconds,
+                    me.average_x, me.average_y, me.average_z,
+                    me.regularity, me.low_intensity, me.high_intensity
+                ))
+                seen = set()
+                deduped = []
+                for row in data:
+                    key = (row[0], row[2])  # (timestamp, motion_seconds)
+                    if key not in seen:
+                        seen.add(key)
+                        deduped.append(row)
+                deduped.sort(key=lambda x: x[0])
+                if len(deduped) < before:
+                    del me.timestamp[:]
+                    del me.orientation[:]
+                    del me.motion_seconds[:]
+                    del me.average_x[:]
+                    del me.average_y[:]
+                    del me.average_z[:]
+                    del me.regularity[:]
+                    del me.low_intensity[:]
+                    del me.high_intensity[:]
+                    for row in deduped:
+                        me.timestamp.append(row[0])
+                        me.orientation.append(row[1])
+                        me.motion_seconds.append(row[2])
+                        me.average_x.append(row[3])
+                        me.average_y.append(row[4])
+                        me.average_z.append(row[5])
+                        me.regularity.append(row[6])
+                        me.low_intensity.append(row[7])
+                        me.high_intensity.append(row[8])
+                    stats['motion'] = (before, len(deduped))
+
+        # Dedup bedtime periods (1-second tolerance for near-duplicates from different TIME_SYNCs)
+        if rd.HasField('bedtime_period'):
+            bp = rd.bedtime_period
+            before = len(bp.bedtime_start)
+            if before > 0:
+                periods = sorted(zip(bp.bedtime_start, bp.bedtime_end))
+                unique = []
+                for start, end in periods:
+                    if not unique:
+                        unique.append((start, end))
+                    elif abs(start - unique[-1][0]) >= 1000:  # >1 sec apart = different night
+                        unique.append((start, end))
+                if len(unique) < before:
+                    del bp.bedtime_start[:]
+                    del bp.bedtime_end[:]
+                    for start, end in unique:
+                        bp.bedtime_start.append(start)
+                        bp.bedtime_end.append(end)
+                    stats['bedtime'] = (before, len(unique))
+
+        # Log dedup stats
+        if stats:
+            for name, (bef, aft) in stats.items():
+                print(f"[RingDataReader] Deduped {name}: {bef} -> {aft} ({bef - aft} duplicates removed)")
 
     @property
     def sync_point(self) -> Optional[SyncPoint]:

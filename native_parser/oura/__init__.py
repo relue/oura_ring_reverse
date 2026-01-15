@@ -5,7 +5,7 @@ High-level API for parsing and analyzing Oura Ring protobuf data.
 Example:
     from oura import OuraAnalyzer
 
-    analyzer = OuraAnalyzer("ring_data.pb")
+    analyzer = OuraAnalyzer("input_data/ring_data.pb")
     print(analyzer.dashboard.sleep_score)
     print(analyzer.hrv.average_rmssd)
 """

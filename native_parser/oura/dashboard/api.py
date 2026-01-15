@@ -26,7 +26,7 @@ class Dashboard:
     on the Oura app's home screen.
 
     Example:
-        analyzer = OuraAnalyzer("ring_data.pb")
+        analyzer = OuraAnalyzer("input_data/ring_data.pb")
         dashboard = analyzer.dashboard
 
         print(f"Sleep Score: {dashboard.sleep_score}")

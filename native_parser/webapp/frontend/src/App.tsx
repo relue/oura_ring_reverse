@@ -77,11 +77,21 @@ function useHRVDashboard() {
   })
 }
 
-function useSleepStagesDashboard() {
+function useSleepStagesDashboard(night: number = -1) {
   return useQuery({
-    queryKey: ['dashboard', 'sleep-stages'],
+    queryKey: ['dashboard', 'sleep-stages', night],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/dashboard/sleep-stages`)
+      const res = await fetch(`${API_BASE}/dashboard/sleep-stages?night=${night}`)
+      return res.json()
+    }
+  })
+}
+
+function useAvailableNights() {
+  return useQuery({
+    queryKey: ['available-nights'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/dashboard/available-nights`)
       return res.json()
     }
   })
@@ -421,11 +431,18 @@ function Overview() {
 }
 
 function SleepStagesDashboard() {
-  const { data, isLoading, error } = useSleepStagesDashboard()
+  const [selectedNight, setSelectedNight] = useState(-1)
+  const { data: nightsData } = useAvailableNights()
+  const { data, isLoading, error } = useSleepStagesDashboard(selectedNight)
 
   if (isLoading) return <LoadingState message="ANALYZING SLEEP DATA..." />
   if (error) return <ErrorState message="FAILED TO LOAD SLEEP DATA" />
 
+  const nights = nightsData?.nights || []
+
+  // Hypnogram: Deep at top (3), Awake at bottom (0)
+  // Backend stage: 0=Deep, 1=Light, 2=REM, 3=Awake
+  // Invert: Deep(0)->3, Light(1)->2, REM(2)->1, Awake(3)->0
   const hypnogramData = data?.epochs?.map((epoch: any) => ({
     ...epoch,
     stageY: 3 - epoch.stage,
@@ -439,7 +456,28 @@ function SleepStagesDashboard() {
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <PageHeader title="SLEEP::STAGES" accentColor={COLORS.purple} />
+      <div className="flex items-center justify-between">
+        <PageHeader title="SLEEP::STAGES" accentColor={COLORS.purple} />
+
+        {/* Night Selector */}
+        {nights.length > 0 && (
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-mono text-gray-500 uppercase tracking-wider">Night:</label>
+            <select
+              value={selectedNight}
+              onChange={(e) => setSelectedNight(parseInt(e.target.value))}
+              className="font-mono text-sm px-4 py-2 rounded-lg bg-black/60 text-purple-400 focus:outline-none"
+              style={{ border: `1px solid ${COLORS.purple}40` }}
+            >
+              {nights.map((night: any, idx: number) => (
+                <option key={idx} value={idx}>
+                  {night.date} ({night.duration})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       {/* Sleep Score Hero */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -488,7 +526,7 @@ function SleepStagesDashboard() {
       <Panel color={COLORS.purple} title="Hypnogram" subtitle="Sleep architecture" className="mb-8">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={hypnogramData.slice(0, 600)}>
+            <AreaChart data={hypnogramData}>
               <defs>
                 <linearGradient id="sleepGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={COLORS.purple} stopOpacity={0.5} />
@@ -506,7 +544,7 @@ function SleepStagesDashboard() {
                 stroke="#4b5563"
                 domain={[0, 3]}
                 ticks={[0, 1, 2, 3]}
-                tickFormatter={(v) => ['DEEP', 'REM', 'LIGHT', 'AWAKE'][v] || ''}
+                tickFormatter={(v) => ['AWAKE', 'REM', 'LIGHT', 'DEEP'][v] || ''}
                 tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }}
                 width={55}
               />
@@ -759,6 +797,113 @@ interface HeartbeatData {
   count: number
 }
 
+// Real-time heartbeat chart component - hacker style
+function HeartbeatChart({ history }: { history: number[] }) {
+  const width = 300
+  const height = 80
+  const maxPoints = 50
+
+  if (history.length < 2) return null
+
+  const data = history.slice(-maxPoints)
+  const min = Math.min(...data) - 5
+  const max = Math.max(...data) + 5
+  const range = max - min || 1
+
+  const points = data.map((bpm, i) => {
+    const x = (i / (maxPoints - 1)) * width
+    const y = height - ((bpm - min) / range) * height
+    return `${x},${y}`
+  }).join(' ')
+
+  // Create the "pulse" effect path
+  const lastBpm = data[data.length - 1]
+  const pulseY = height - ((lastBpm - min) / range) * height
+
+  return (
+    <div className="relative">
+      <svg width={width} height={height} className="overflow-visible">
+        {/* Grid lines */}
+        <defs>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0f172a" />
+            <stop offset="50%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <linearGradient id="scanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="transparent" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Horizontal grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map(p => (
+          <line
+            key={p}
+            x1="0" y1={p * height}
+            x2={width} y2={p * height}
+            stroke="#1e293b"
+            strokeWidth="1"
+          />
+        ))}
+
+        {/* The heartbeat line - with smooth transition */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke="url(#lineGradient)"
+          strokeWidth="2"
+          filter="url(#glow)"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          style={{ transition: 'all 0.15s ease-out' }}
+        />
+
+        {/* Pulsing dot at the end - smooth position */}
+        <circle
+          cx={width}
+          cy={pulseY}
+          r="5"
+          fill="#22d3ee"
+          filter="url(#glow)"
+          style={{ transition: 'cy 0.15s ease-out' }}
+        >
+          <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="1;0.6;1" dur="1s" repeatCount="indefinite" />
+        </circle>
+
+        {/* Moving scanline effect */}
+        <line
+          x1="0" y1="0"
+          x2="0" y2={height}
+          stroke="#22d3ee"
+          strokeWidth="2"
+          opacity="0.2"
+        >
+          <animate attributeName="x1" values={`0;${width};0`} dur="3s" repeatCount="indefinite" />
+          <animate attributeName="x2" values={`0;${width};0`} dur="3s" repeatCount="indefinite" />
+        </line>
+
+        {/* Trailing glow behind scanline */}
+        <rect x="0" y="0" width="30" height={height} fill="url(#scanGlow)" opacity="0.3">
+          <animate attributeName="x" values={`-30;${width};-30`} dur="3s" repeatCount="indefinite" />
+        </rect>
+      </svg>
+
+      {/* Min/Max labels */}
+      <div className="absolute right-0 top-0 text-[10px] font-mono text-cyan-600">{Math.round(max)}</div>
+      <div className="absolute right-0 bottom-0 text-[10px] font-mono text-cyan-600">{Math.round(min)}</div>
+    </div>
+  )
+}
+
 interface BLEStatus {
   connected: boolean
   authenticated: boolean
@@ -776,6 +921,7 @@ function useBLEWebSocket() {
   })
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [heartbeat, setHeartbeat] = useState<HeartbeatData | null>(null)
+  const [heartbeatHistory, setHeartbeatHistory] = useState<number[]>([])
   const [progress, setProgress] = useState<{ action: string; current: number; total: number; label: string } | null>(null)
   const [wsConnected, setWsConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
@@ -817,6 +963,7 @@ function useBLEWebSocket() {
             break
           case 'heartbeat':
             setHeartbeat({ bpm: msg.bpm, ibi: msg.ibi, count: msg.count })
+            setHeartbeatHistory(prev => [...prev.slice(-99), msg.bpm])  // Keep last 100
             break
           case 'progress':
             setProgress({ action: msg.action, current: msg.current, total: msg.total, label: msg.label })
@@ -839,11 +986,7 @@ function useBLEWebSocket() {
             setLogs(prev => [...prev, { level: 'error', message: msg.message, time: new Date() }])
             break
           case 'sync':
-            setLogs(prev => [...prev, {
-              level: 'info',
-              message: `Time sync: ring=${msg.ring_time}, utc=${msg.utc_millis}`,
-              time: new Date()
-            }])
+            // Sync point received - no extra log needed, client.py already logged it
             break
         }
       }
@@ -865,9 +1008,12 @@ function useBLEWebSocket() {
   }, [])
 
   const clearLogs = useCallback(() => setLogs([]), [])
-  const clearHeartbeat = useCallback(() => setHeartbeat(null), [])
+  const clearHeartbeat = useCallback(() => {
+    setHeartbeat(null)
+    setHeartbeatHistory([])
+  }, [])
 
-  return { status, logs, heartbeat, progress, wsConnected, send, clearLogs, clearHeartbeat }
+  return { status, logs, heartbeat, heartbeatHistory, progress, wsConnected, send, clearLogs, clearHeartbeat }
 }
 
 // Status indicator component
@@ -1066,7 +1212,7 @@ function ConfirmDialog({ action, onConfirm, onCancel }: {
 
 // Main Ring Control Page
 function RingControlPage() {
-  const { status, logs, heartbeat, progress, wsConnected, send, clearLogs, clearHeartbeat } = useBLEWebSocket()
+  const { status, logs, heartbeat, heartbeatHistory, progress, wsConnected, send, clearLogs, clearHeartbeat } = useBLEWebSocket()
   const [isHeartbeatActive, setIsHeartbeatActive] = useState(false)
   const [adapters, setAdapters] = useState<string[]>(['hci0'])
   const [selectedAdapter, setSelectedAdapter] = useState('hci0')
@@ -1184,24 +1330,50 @@ function RingControlPage() {
 
       {/* Live Heartbeat Display */}
       {(isHeartbeatActive || heartbeat) && (
-        <Panel color={COLORS.pink} title="Live Heartbeat" className="mb-8">
-          <div className="flex items-center gap-8">
-            <div className="text-6xl font-mono font-bold text-pink-400">
-              {heartbeat ? Math.round(heartbeat.bpm) : '--'}
-              <span className="text-2xl text-pink-600 ml-2">BPM</span>
+        <Panel color={COLORS.cyan} title="♥ Live Heartbeat" className="mb-8">
+          <div className="flex items-center gap-6">
+            {/* BPM Display */}
+            <div className="flex flex-col items-center">
+              <div className="text-5xl font-mono font-bold text-cyan-400 tabular-nums">
+                {heartbeat ? Math.round(heartbeat.bpm) : '--'}
+              </div>
+              <div className="text-xs text-cyan-600 uppercase tracking-wider">BPM</div>
             </div>
-            <div className="text-xl font-mono text-gray-400">
-              IBI: {heartbeat?.ibi || '--'}ms
+
+            {/* Real-time Chart */}
+            <div className="flex-1 bg-slate-900/50 rounded-lg p-3 border border-cyan-900/30">
+              <HeartbeatChart history={heartbeatHistory} />
+              {heartbeatHistory.length < 2 && (
+                <div className="text-xs text-gray-500 font-mono text-center py-6">
+                  Waiting for data...
+                </div>
+              )}
             </div>
-            <div className="text-sm font-mono text-gray-500">
-              #{heartbeat?.count || 0}
+
+            {/* Stats */}
+            <div className="flex flex-col gap-2 text-right">
+              <div className="font-mono">
+                <span className="text-gray-500 text-xs">IBI </span>
+                <span className="text-green-400">{heartbeat?.ibi || '--'}</span>
+                <span className="text-gray-600 text-xs">ms</span>
+              </div>
+              <div className="font-mono">
+                <span className="text-gray-500 text-xs">CNT </span>
+                <span className="text-emerald-400">#{heartbeat?.count || 0}</span>
+              </div>
+              <div className="font-mono text-xs text-gray-600">
+                {heartbeatHistory.length > 0 && (
+                  <>avg: {Math.round(heartbeatHistory.reduce((a, b) => a + b, 0) / heartbeatHistory.length)}</>
+                )}
+              </div>
             </div>
-            <div className="flex-1" />
+
+            {/* Stop Button */}
             <ActionButton
-              label={isHeartbeatActive ? 'Stop' : 'Start'}
+              label={isHeartbeatActive ? '■ Stop' : '▶ Start'}
               onClick={handleHeartbeat}
-              disabled={!status.authenticated || status.is_busy}
-              color={isHeartbeatActive ? COLORS.red : COLORS.pink}
+              disabled={!status.authenticated || (status.is_busy && !isHeartbeatActive)}
+              color={isHeartbeatActive ? COLORS.red : COLORS.cyan}
             />
           </div>
         </Panel>
@@ -1234,6 +1406,21 @@ function RingControlPage() {
               </div>
             )}
           </div>
+        </div>
+      </Panel>
+
+      {/* Parse Events - Convert raw events to protobuf */}
+      <Panel color={COLORS.yellow} title="Parse Events" subtitle="Convert raw events to protobuf via native parser" className="mb-8">
+        <div className="flex items-center gap-4">
+          <ActionButton
+            label="Parse Events"
+            onClick={() => send('parse', {})}
+            disabled={status.is_busy}
+            color={COLORS.yellow}
+          />
+          <span className="text-xs text-gray-500 font-mono">
+            ring_events.txt → ring_data.pb (via QEMU + libringeventparser.so)
+          </span>
         </div>
       </Panel>
 

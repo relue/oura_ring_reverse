@@ -781,6 +781,32 @@ class SleepStagesDashboard(BaseModel):
     bedtime_end: str
 
 
+@app.get("/dashboard/available-nights")
+async def get_available_nights():
+    """Get list of available sleep nights for selection."""
+    reader = get_reader()
+    rd = reader.raw
+
+    nights = []
+    if rd.HasField('bedtime_period'):
+        bp = rd.bedtime_period
+        for i in range(len(bp.bedtime_start)):
+            start_ms = bp.bedtime_start[i]
+            end_ms = bp.bedtime_end[i]
+            start_dt = datetime.fromtimestamp(start_ms / 1000)
+            end_dt = datetime.fromtimestamp(end_ms / 1000)
+            duration_h = (end_ms - start_ms) / 1000 / 3600
+            nights.append({
+                "index": i,
+                "date": start_dt.strftime("%Y-%m-%d"),
+                "start": start_dt.strftime("%H:%M"),
+                "end": end_dt.strftime("%H:%M"),
+                "duration": f"{duration_h:.1f}h"
+            })
+
+    return {"nights": nights, "count": len(nights)}
+
+
 @app.get("/dashboard/sleep-stages", response_model=SleepStagesDashboard)
 async def get_sleep_stages_dashboard(
     night: int = Query(default=-1, description="Night index (-1 = last/most recent)")

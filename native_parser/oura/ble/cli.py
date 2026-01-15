@@ -20,6 +20,9 @@ Usage:
     # Get ALL data with time sync
     python -m oura.ble.cli --get-all-data
 
+    # Get only NEW data since last sync (like Oura app - prevents duplicates!)
+    python -m oura.ble.cli --get-data-incremental
+
     # Sync time with ring
     python -m oura.ble.cli --sync-time
 """
@@ -156,6 +159,8 @@ async def main():
                         help='Get stored data from ring')
     parser.add_argument('--get-all-data', action='store_true',
                         help='Get ALL stored data (with time sync)')
+    parser.add_argument('--get-data-incremental', action='store_true',
+                        help='Get only NEW data since last sync (like Oura app)')
     parser.add_argument('--sync-time', action='store_true',
                         help='Sync time with ring and save sync point')
     parser.add_argument('--bond', action='store_true',
@@ -190,6 +195,8 @@ async def main():
                         help='Event filter preset')
     parser.add_argument('--filter-whitelist', nargs='+',
                         help='Only include these event types (hex)')
+    parser.add_argument('--no-debug', action='store_true',
+                        help='Exclude debug events (0x43, 0x5b, 0x66, 0x67) - reduces data ~40%%')
     parser.add_argument('--scan-timeout', type=float, default=15.0,
                         help='Scan timeout for bonding')
 
@@ -223,7 +230,8 @@ async def main():
 
     # Run interactive mode if no specific action
     if not (args.heartbeat or args.get_data or args.get_all_data or
-            args.sync_time or args.set_auth_key or args.factory_reset):
+            args.get_data_incremental or args.sync_time or args.set_auth_key or
+            args.factory_reset):
         client = OuraClient(
             adapter=args.adapter,
             auth_key=auth_key,
@@ -257,7 +265,7 @@ async def main():
             return 0
 
         # Authenticate for other operations
-        if args.heartbeat or args.get_data or args.get_all_data or args.sync_time:
+        if args.heartbeat or args.get_data or args.get_all_data or args.get_data_incremental or args.sync_time:
             if not await client.authenticate():
                 print("Authentication failed!")
                 return 1
@@ -274,7 +282,38 @@ async def main():
             await client.start_heartbeat(args.duration)
             return 0
 
-        # Get data
+        # Incremental data sync (like Oura app)
+        if args.get_data_incremental:
+            # Sync time first
+            print("\n=== INCREMENTAL SYNC (like Oura app) ===")
+            print("This only fetches NEW events since last sync.\n")
+            await client.sync_time()
+            await asyncio.sleep(1)
+
+            # Build filter
+            event_filter = None
+            if args.filter != 'all':
+                event_filter = EventFilter.from_preset(args.filter)
+            if args.filter_whitelist:
+                event_filter = event_filter or EventFilter()
+                for t in args.filter_whitelist:
+                    event_filter.add_whitelist(int(t, 16))
+
+            # Fetch only new data
+            data = await client.get_data_incremental(
+                event_filter=event_filter,
+                sync_point_file=args.sync_point_file
+            )
+
+            # Save events if any (append for incremental sync)
+            if data:
+                client.save_events_to_file(args.output, append=True)
+                print(f"\nAppended {len(data)} new events to {args.output}")
+            else:
+                print("\nNo new events to save.")
+            return 0
+
+        # Get data (full)
         if args.get_all_data or args.get_data:
             # Sync time first
             print("\n=== Capturing time sync point ===")
@@ -289,6 +328,18 @@ async def main():
                 event_filter = event_filter or EventFilter()
                 for t in args.filter_whitelist:
                     event_filter.add_whitelist(int(t, 16))
+            if args.no_debug:
+                event_filter = event_filter or EventFilter()
+                # Blacklist debug/diagnostic events:
+                # 0x43: API_DEBUG_EVENT (~274K)
+                # 0x5b: API_BLE_CONNECTION_IND (~18K)
+                # 0x5c: API_FLASH_USAGE_STATS
+                # 0x79: UNKNOWN_79 (~34K, likely debug)
+                # 0x82, 0x83: UNKNOWN (~3K, likely debug)
+                debug_tags = [0x43, 0x5b, 0x5c, 0x79, 0x82, 0x83]
+                for tag in debug_tags:
+                    event_filter.add_blacklist(tag)
+                print(f"[>] Debug events filtered out: {[hex(t) for t in debug_tags]}")
 
             # Fetch data
             data = await client.get_data(
@@ -296,8 +347,15 @@ async def main():
                 fetch_all=args.get_all_data
             )
 
+            # Calculate last_synced_seq from number of events fetched
+            last_seq = None
+            if data and args.get_all_data:
+                # For full fetch starting at seq 0, last seq = num events - 1
+                last_seq = len(data) - 1
+                print(f"\nUpdating last_synced_seq to {last_seq}")
+
             # Save
-            client.save_sync_point(args.sync_point_file)
+            client.save_sync_point(args.sync_point_file, last_synced_seq=last_seq)
             client.save_events_to_file(args.output)
             return 0
 

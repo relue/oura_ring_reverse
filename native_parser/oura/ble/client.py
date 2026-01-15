@@ -189,26 +189,32 @@ class OuraClient:
     # ========================================================================
 
     async def connect(self, address: Optional[str] = None, timeout: float = 30.0, retries: int = 3) -> bool:
-        """Connect to Oura Ring.
+        """Connect to Oura Ring using scan + identity address approach.
+
+        This approach avoids BR/EDR interference:
+        1. Scan to find device and populate Bleak's cache
+        2. Connect via identity address string (NOT the BLEDevice object)
 
         Args:
-            address: Optional identity address. If None, tries bonded address or scans.
-            timeout: Connection timeout in seconds.
-            retries: Number of connection attempts.
-
-        Returns:
-            True if connected successfully.
+            address: Optional identity address. If None, tries bonded address.
+            timeout: Connection timeout in seconds (default 30s)
+            retries: Number of connection attempts (default 3)
         """
         # Try bonded address if no address provided
         if not address:
             address = self._load_bonded_address()
 
-        # Step 1: Scan to find device
+        # Check if device is already connected via BlueZ - disconnect first so Bleak can connect
+        if address:
+            await self._disconnect_if_bluez_connected(address)
+
+        # Step 1: Scan to find device (populates Bleak's cache)
         self._log('info', "Scanning for Oura Ring (must be awake - put on charger briefly)...")
         self.device = await self.scan(timeout=15.0)
 
         if not self.device:
             self._log('error', "Oura Ring not found during scan!")
+            self._log('info', "Tip: Put ring on charger to wake it up, then try again.")
             return False
 
         # Use scanned address if no bonded address
@@ -345,8 +351,12 @@ class OuraClient:
             }
             self.time_sync_points.append(sync_point)
 
-            self._log('success', f"Time sync: ring_time={ring_time_deciseconds} deciseconds")
-            self._log('info', f"Ring timestamp at {datetime.now().strftime('%H:%M:%S')}")
+            # Convert ring time to human-readable format
+            ring_hours = ring_time_deciseconds / 36000  # deciseconds to hours
+            self._log('success', f"Time sync captured: ring uptime {ring_hours:.1f}h")
+
+            # Always save to file immediately so get_data() can load it
+            self.save_sync_point()
 
             if self.on_sync_point:
                 self.on_sync_point(sync_point)
@@ -360,8 +370,8 @@ class OuraClient:
 
             self._log('info', f"Batch: {events_received} events, bytes_left={self.bytes_left}, next_seq={self.current_seq_num}")
 
-            if self.bytes_left == 0:
-                self.fetch_complete = True
+            # NOTE: Don't set fetch_complete here - let the get_data loop handle it
+            # after events have had time to stream in
 
         # Other events
         elif tag >= 0x41:
@@ -567,55 +577,292 @@ class OuraClient:
         event_filter: Optional[EventFilter] = None,
         stop_after_count: Optional[int] = None,
         stop_after_type: Optional[int] = None,
-        fetch_all: bool = False
+        fetch_all: bool = False,
+        target_seq: int = -1,
+        save_between_batches: bool = True,
+        output_file: Optional[str] = None,
+        append_mode: bool = False
     ) -> List[bytes]:
-        """Get stored event data from ring with optional filtering."""
+        """Get stored event data from ring with optional filtering.
+
+        When fetch_all=True, handles the ring's ~50K event limit per streaming
+        session by automatically fetching in batches until all data is retrieved.
+
+        Args:
+            target_seq: If specified, keep batching until we reach this sequence.
+                       If -1 and fetch_all=True, will auto-detect via binary search.
+            save_between_batches: If True, save to file after each batch (prevents data loss)
+            output_file: Output filename for incremental saves (default: ring_events.txt)
+        """
         if not self.is_authenticated:
             self._log('error', "Must be authenticated first!")
             return []
 
-        if start_seq < 0:
+        # Load sync point for timestamp-based end detection
+        sync_point = self._load_sync_point()
+        sync_ring_time = sync_point.get('ring_time')
+        sync_utc_millis = sync_point.get('utc_millis')
+
+        if sync_ring_time and sync_utc_millis:
+            self._log('info', f"Sync point loaded: ring_time={sync_ring_time}")
+        else:
+            self._log('warn', "No sync point - timestamp detection disabled")
+
+        # Determine target sequence for fetch_all mode
+        if fetch_all and target_seq < 0:
             last_valid_seq, first_valid_seq = await self.find_last_event_seq()
             if last_valid_seq < 0:
                 self._log('warn', "No events found on ring!")
                 return []
-
-            if fetch_all:
-                start_seq = first_valid_seq
-                self._log('info', f"FETCH ALL: Will fetch from seq {first_valid_seq} to {last_valid_seq}")
-            else:
-                start_seq = first_valid_seq
-                self._log('info', f"Will fetch from seq {start_seq} to {last_valid_seq}")
+            target_seq = last_valid_seq
+            if start_seq < 0:
+                start_seq = 0  # Start from beginning for complete fetch
+            self._log('info', f"FETCH ALL: seq {start_seq} to {target_seq} (batched, ~50K per batch)")
+        elif start_seq < 0:
+            last_valid_seq, first_valid_seq = await self.find_last_event_seq()
+            if last_valid_seq < 0:
+                self._log('warn', "No events found on ring!")
+                return []
+            start_seq = first_valid_seq
+            self._log('info', f"Will fetch from seq {start_seq} to {last_valid_seq}")
 
         self._log('info', f"=== GETTING DATA (starting from seq {start_seq}) ===")
 
-        self.event_data.clear()
-        self.current_seq_num = start_seq
-        self.fetch_complete = False
         self.current_filter = event_filter
         self.stop_after_count = stop_after_count
         self.stop_after_type = stop_after_type
         self.event_type_count = 0
 
-        batch_count = 0
-        while not self.fetch_complete:
-            cmd = build_get_event_cmd(self.current_seq_num, max_events)
-            await self.send_command(cmd, f"GetEvent (seq={self.current_seq_num})")
-            await asyncio.sleep(0.5)
+        import time
+        overall_start_time = time.time()
+        all_events: List[bytes] = []
+        batch_num = 0
+        current_seq = start_seq
 
-            batch_count += 1
-            self._emit_progress('get_data', len(self.event_data), 0, f"Received {len(self.event_data)} events")
+        # Batch fetching loop - ring limits streaming to ~50K events per session
+        while True:
+            batch_num += 1
+            self._log('info', f"=== BATCH {batch_num}: Fetching from seq {current_seq} ===")
 
-            if batch_count > 1000:
-                self._log('warn', "Max batches reached")
+            # Reset state for this batch
+            self.event_data.clear()
+            self.current_seq_num = current_seq
+            self.fetch_complete = False
+            self.bytes_left = -1
+
+            batch_start_time = time.time()
+
+            # Send GetEvent command (max_events=0 for streaming mode)
+            cmd = build_get_event_cmd(current_seq, max_events)
+            await self.send_command(cmd, f"GetEvent (seq={current_seq}, stream)")
+
+            # Wait for batch to complete
+            last_count = 0
+            stall_count = 0
+
+            while not self.fetch_complete:
+                await asyncio.sleep(1.0)
+                current = len(self.event_data)
+                batch_elapsed = time.time() - batch_start_time
+                total_elapsed = time.time() - overall_start_time
+                total_events = len(all_events) + current
+
+                # Progress update
+                rate = total_events / total_elapsed if total_elapsed > 0 else 0
+                self._log('info', f"Batch {batch_num} [{batch_elapsed:.0f}s]: {current} events, "
+                         f"total={total_events} ({rate:.0f}/sec), bytes_left={self.bytes_left}")
+                self._emit_progress('get_data', total_events, 0, f"Batch {batch_num}: {total_events} events")
+
+                # Check completion
+                if self.bytes_left == 0:
+                    self.fetch_complete = True
+                elif current == last_count:
+                    stall_count += 1
+                    if stall_count >= 3:  # Stalled - end of batch (50K limit)
+                        self._log('info', f"Batch {batch_num} stalled at {current} events")
+                        self.fetch_complete = True
+                else:
+                    stall_count = 0
+
+                last_count = current
+
+                # Per-batch timeout (2 minutes)
+                if batch_elapsed > 120:
+                    self._log('warn', f"Batch {batch_num} timeout!")
+                    break
+
+            # Accumulate events from this batch
+            batch_events = len(self.event_data)
+            all_events.extend(self.event_data)
+            self._log('success', f"Batch {batch_num} complete: {batch_events} events")
+
+            # Update current sequence position
+            if batch_events > 0:
+                current_seq += batch_events
+
+            # Save to file between batches (prevents data loss if interrupted)
+            if save_between_batches and len(all_events) > 0:
+                filepath = self.data_dir / (output_file or "ring_events.txt")
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+
+                if append_mode:
+                    # Append new events only (for incremental sync)
+                    with open(filepath, 'a') as f:
+                        for event in self.event_data:  # Only this batch's events
+                            tag = event[0] if event else 0
+                            f.write(f"{current_seq - batch_events + self.event_data.index(event)}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
+                    self._log('info', f"Appended {batch_events} events to {filepath}")
+                else:
+                    # Overwrite with all events (for full fetch)
+                    with open(filepath, 'w') as f:
+                        f.write("# Oura Ring Event Export (in progress)\n")
+                        f.write(f"# Events so far: {len(all_events)}\n")
+                        f.write("#\n")
+                        f.write("# Format: index|tag_hex|event_name|hex_data\n")
+                        f.write("#\n")
+                        for i, event in enumerate(all_events):
+                            tag = event[0] if event else 0
+                            f.write(f"{i}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
+                    self._log('info', f"Saved {len(all_events)} events to {filepath}")
+
+            # fetch_all mode: check if caught up to real-time via timestamp
+            if fetch_all:
+                if batch_events == 0:
+                    self._log('success', "All data fetched (0 events in batch)")
+                    break
+
+                # Timestamp-based end detection: stop when latest event is near "now"
+                if sync_ring_time and sync_utc_millis and self.event_data:
+                    # Get latest event's timestamp (bytes 2-5, little-endian, in deciseconds)
+                    latest_event = self.event_data[-1]
+                    if len(latest_event) >= 6:
+                        latest_ts = int.from_bytes(latest_event[2:6], 'little')
+                        # Calculate current ring time (ring_time is in deciseconds!)
+                        current_utc_ms = int(time.time() * 1000)
+                        ring_time_now = sync_ring_time + (current_utc_ms - sync_utc_millis) / 100  # ms to deciseconds
+                        time_diff_ds = ring_time_now - latest_ts  # in deciseconds
+                        time_diff_sec = time_diff_ds / 10  # convert to seconds for display
+
+                        if 0 <= time_diff_sec < 30:  # Within 30 seconds of "now" (and not negative)
+                            self._log('success', f"Caught up to real-time! (latest_ts={latest_ts}, now={ring_time_now:.0f}, diff={time_diff_sec:.1f}s)")
+                            break
+                        elif batch_num % 10 == 0:  # Log progress every 10 batches
+                            self._log('info', f"Time remaining: {time_diff_sec:.0f}s behind real-time")
+
+                # Ring's bytes_left=0 just means "session limit reached", not "no more data"
+                self._log('info', f"Continuing to next batch from seq {current_seq}...")
+                await asyncio.sleep(0.5)
+                continue
+
+            # Single batch mode
+            if self.bytes_left == 0:
+                self._log('success', "All data fetched (bytes_left=0)")
                 break
+
+            if self.bytes_left > 0:
+                self._log('info', f"More data available ({self.bytes_left} bytes). "
+                         "Use --get-all-data to fetch everything.")
+            break
 
         self.current_filter = None
         self.stop_after_count = None
         self.stop_after_type = None
 
-        self._log('success', f"Received {len(self.event_data)} events")
-        return self.event_data
+        elapsed = time.time() - overall_start_time
+        self._log('success', f"=== FETCH COMPLETE: {len(all_events)} events in {elapsed:.1f}s ({batch_num} batches) ===")
+
+        # Final save with "complete" header (only for full fetch, not append mode)
+        if save_between_batches and all_events and not append_mode:
+            filepath = self.data_dir / (output_file or "ring_events.txt")
+            with open(filepath, 'w') as f:
+                f.write("# Oura Ring Event Export\n")
+                f.write(f"# Timestamp: {datetime.now().strftime('%a %b %d %H:%M:%S %Z %Y')}\n")
+                f.write(f"# Events: {len(all_events)}\n")
+                f.write("#\n")
+                f.write("# Format: index|tag_hex|event_name|hex_data\n")
+                f.write("#\n")
+                for i, event in enumerate(all_events):
+                    tag = event[0] if event else 0
+                    f.write(f"{i}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
+            self._log('success', f"Final save: {len(all_events)} events to {filepath}")
+
+        # Store in event_data for save_events_to_file()
+        self.event_data = all_events
+        return all_events
+
+    async def get_data_incremental(
+        self,
+        event_filter: Optional[EventFilter] = None,
+        sync_point_file: Optional[str] = None
+    ) -> List[bytes]:
+        """Get only NEW events since last sync (like Oura app does).
+
+        This method tracks `last_synced_seq` in the sync_point.json file and only
+        fetches events with sequence numbers greater than the last sync. This
+        prevents duplicate data from being fetched across multiple syncs.
+
+        How it works (same approach as original Oura app):
+        1. Load `last_synced_seq` from sync_point.json (default: 0)
+        2. Fetch events with seq > last_synced_seq
+        3. After successful fetch, update `last_synced_seq` in sync_point.json
+
+        Args:
+            event_filter: Optional event type filter
+            sync_point_file: Optional sync point filename
+
+        Returns:
+            List of raw event bytes (only NEW events since last sync)
+        """
+        if not self.is_authenticated:
+            self._log('error', "Must be authenticated first!")
+            return []
+
+        # Load existing sync point to get last_synced_seq
+        sync_point = self._load_sync_point(sync_point_file)
+        last_synced_seq = sync_point.get('last_synced_seq', 0)
+
+        self._log('info', "="*60)
+        self._log('info', "INCREMENTAL SYNC (like Oura app)")
+        self._log('info', "="*60)
+        self._log('info', f"Last synced sequence: {last_synced_seq}")
+
+        # Fetch from last_synced_seq + 1, batching until no more events
+        start_seq = last_synced_seq + 1 if last_synced_seq > 0 else 0
+        self._log('info', f"Fetching from seq {start_seq}...")
+
+        events = await self.get_data(
+            start_seq=start_seq,
+            event_filter=event_filter,
+            fetch_all=True,  # Fetch all new events in batches (until 0 events)
+            append_mode=True  # Append to existing file, don't overwrite
+        )
+
+        if events:
+            # Calculate new last_synced_seq
+            # The sequence number is the starting seq + number of events fetched
+            new_last_synced_seq = start_seq + len(events) - 1
+            self._log('success', f"Fetched {len(events)} new events")
+            self._log('info', f"Updating last_synced_seq: {last_synced_seq} -> {new_last_synced_seq}")
+
+            # Save updated sync point with new last_synced_seq
+            # Note: sync_time() should have been called before this, so time_sync_points should be populated
+            if self.time_sync_points:
+                self.save_sync_point(
+                    filename=sync_point_file,
+                    description='Incremental sync via oura.ble',
+                    last_synced_seq=new_last_synced_seq
+                )
+            else:
+                # Update just the last_synced_seq in existing file
+                sync_point['last_synced_seq'] = new_last_synced_seq
+                filepath = self.data_dir / (sync_point_file or SYNC_POINT_FILE)
+                with open(filepath, 'w') as f:
+                    json.dump(sync_point, f, indent=2)
+                self._log('info', f"Updated last_synced_seq in {filepath}")
+        else:
+            self._log('warn', "No events fetched")
+
+        return events
 
     # ========================================================================
     # Auth Key Management
@@ -660,13 +907,53 @@ class OuraClient:
     # Sync Point Management
     # ========================================================================
 
-    def save_sync_point(self, filename: Optional[str] = None, description: str = None) -> bool:
-        """Save the latest sync point to file."""
+    def _load_sync_point(self, filename: Optional[str] = None) -> dict:
+        """Load sync point from file.
+
+        Returns:
+            Dict with sync point data, or empty dict if not found.
+            Keys: ring_time, utc_millis, timestamp, description, last_synced_seq
+        """
+        filepath = self.data_dir / (filename or SYNC_POINT_FILE)
+        if not filepath.exists():
+            return {}
+
+        try:
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            self._log('warn', f"Could not load sync point: {e}")
+            return {}
+
+    def save_sync_point(
+        self,
+        filename: Optional[str] = None,
+        description: str = None,
+        last_synced_seq: Optional[int] = None
+    ) -> bool:
+        """Save the latest sync point to file.
+
+        Args:
+            filename: Optional filename (uses default if not specified)
+            description: Optional description string
+            last_synced_seq: Optional last synced sequence number for incremental sync
+        """
         if not self.time_sync_points:
             self._log('error', "No sync points captured - run sync_time() first")
             return False
 
         latest = self.time_sync_points[-1]
+
+        # Load existing sync point to preserve last_synced_seq if not provided
+        filepath = self.data_dir / (filename or SYNC_POINT_FILE)
+        existing = {}
+        if filepath.exists():
+            try:
+                with open(filepath, 'r') as f:
+                    existing = json.load(f)
+            except:
+                pass
+
         sync_point = {
             'ring_time': latest['ring_time'],
             'utc_millis': latest['utc_millis'],
@@ -674,13 +961,20 @@ class OuraClient:
             'description': description or 'Time sync captured via oura.ble'
         }
 
-        filepath = self.data_dir / (filename or SYNC_POINT_FILE)
+        # Preserve or update last_synced_seq
+        if last_synced_seq is not None:
+            sync_point['last_synced_seq'] = last_synced_seq
+        elif 'last_synced_seq' in existing:
+            sync_point['last_synced_seq'] = existing['last_synced_seq']
+
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
         with open(filepath, 'w') as f:
             json.dump(sync_point, f, indent=2)
 
         self._log('success', f"Saved sync point to {filepath}")
+        if 'last_synced_seq' in sync_point:
+            self._log('info', f"  last_synced_seq: {sync_point['last_synced_seq']}")
         return True
 
     # ========================================================================
@@ -743,6 +1037,68 @@ class OuraClient:
         except Exception as e:
             self._log('warn', f"Could not save bonded address: {e}")
 
+    async def _connect_via_dbus(self, address: str, timeout: float = 15.0) -> bool:
+        """Connect to bonded device via D-Bus (works without scanning).
+
+        Args:
+            address: Device address (identity address)
+            timeout: Connection timeout in seconds
+
+        Returns:
+            True if connected successfully
+        """
+        try:
+            import dbus
+
+            bus = dbus.SystemBus()
+            device_path = f"/org/bluez/{self.adapter}/dev_{address.replace(':', '_')}"
+
+            try:
+                device_obj = bus.get_object("org.bluez", device_path)
+                device = dbus.Interface(device_obj, "org.bluez.Device1")
+                props = dbus.Interface(device_obj, "org.freedesktop.DBus.Properties")
+            except dbus.exceptions.DBusException as e:
+                self._log('warn', f"Device not found in BlueZ: {e}")
+                return False
+
+            # Check if already connected
+            connected = props.Get("org.bluez.Device1", "Connected")
+            if connected:
+                self._log('info', "Device already connected via BlueZ")
+            else:
+                # Initiate connection via D-Bus
+                self._log('info', "Connecting via D-Bus...")
+                device.Connect()
+
+                # Wait for connection
+                for _ in range(int(timeout * 2)):
+                    await asyncio.sleep(0.5)
+                    connected = props.Get("org.bluez.Device1", "Connected")
+                    if connected:
+                        break
+
+                if not connected:
+                    self._log('warn', "D-Bus connection timed out")
+                    return False
+
+            # Now create BleakClient from connected device
+            self._log('info', "Creating BleakClient from connected device...")
+            self.client = BleakClient(address, adapter=self.adapter)
+            await self.client.connect(timeout=5.0)
+
+            if self.client.is_connected:
+                return True
+            else:
+                self._log('warn', "BleakClient failed to connect after D-Bus connect")
+                return False
+
+        except ImportError:
+            self._log('warn', "dbus module not available")
+            return False
+        except Exception as e:
+            self._log('warn', f"D-Bus connect failed: {e}")
+            return False
+
     def _get_identity_address_from_bluez(self) -> Optional[str]:
         """Get the identity address from BlueZ for bonded Oura Ring via D-Bus."""
         try:
@@ -800,12 +1156,41 @@ class OuraClient:
 
         return None
 
+    async def _disconnect_if_bluez_connected(self, address: str):
+        """Disconnect device if already connected via BlueZ (blocking Bleak)."""
+        try:
+            import dbus
+            bus = dbus.SystemBus()
+            addr_path = address.replace(':', '_').upper()
+            device_path = f"/org/bluez/{self.adapter}/dev_{addr_path}"
+            device_obj = bus.get_object("org.bluez", device_path)
+            props = dbus.Interface(device_obj, "org.freedesktop.DBus.Properties")
+            is_connected = bool(props.Get("org.bluez.Device1", "Connected"))
+            if is_connected:
+                self._log('info', "Ring already connected via BlueZ, disconnecting first...")
+                device_iface = dbus.Interface(device_obj, "org.bluez.Device1")
+                device_iface.Disconnect()
+                await asyncio.sleep(0.5)
+        except ImportError:
+            pass  # dbus not available
+        except Exception:
+            pass  # Device not in BlueZ or other error
+
     # ========================================================================
     # Event File Export
     # ========================================================================
 
-    def save_events_to_file(self, filename: Optional[str] = None) -> bool:
-        """Save collected events to file in standard format."""
+    def save_events_to_file(self, filename: Optional[str] = None, append: bool = False) -> bool:
+        """Save collected events to file in standard format.
+
+        Args:
+            filename: Output filename (default: ring_events.txt)
+            append: If True, append to existing file instead of overwriting.
+                   Used for incremental sync to accumulate events.
+
+        Returns:
+            True if saved successfully.
+        """
         if not self.event_data:
             self._log('error', "No events to save")
             return False
@@ -813,16 +1198,30 @@ class OuraClient:
         filepath = self.data_dir / (filename or "ring_events.txt")
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(filepath, 'w') as f:
-            f.write("# Oura Ring Event Export\n")
-            f.write(f"# Timestamp: {datetime.now().strftime('%a %b %d %H:%M:%S %Z %Y')}\n")
-            f.write(f"# Events: {len(self.event_data)}\n")
-            f.write("#\n")
-            f.write("# Format: index|tag_hex|event_name|hex_data\n")
-            f.write("#\n")
+        # Determine starting index for event numbering
+        start_index = 0
+        if append and filepath.exists():
+            # Count existing events to continue numbering
+            with open(filepath, 'r') as f:
+                for line in f:
+                    if line and not line.startswith('#'):
+                        start_index += 1
+
+        mode = 'a' if append and filepath.exists() else 'w'
+        with open(filepath, mode) as f:
+            if mode == 'w':
+                # Write header only for new files
+                f.write("# Oura Ring Event Export\n")
+                f.write(f"# Timestamp: {datetime.now().strftime('%a %b %d %H:%M:%S %Z %Y')}\n")
+                f.write(f"# Events: {len(self.event_data)}\n")
+                f.write("#\n")
+                f.write("# Format: index|tag_hex|event_name|hex_data\n")
+                f.write("#\n")
+
             for i, event in enumerate(self.event_data):
                 tag = event[0] if event else 0
-                f.write(f"{i}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
+                f.write(f"{start_index + i}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
 
-        self._log('success', f"Saved {len(self.event_data)} events to {filepath}")
+        action = "Appended" if append else "Saved"
+        self._log('success', f"{action} {len(self.event_data)} events to {filepath}")
         return True

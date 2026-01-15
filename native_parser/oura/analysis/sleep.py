@@ -71,6 +71,9 @@ class SleepAnalyzer:
         3 = REM
     """
 
+    # Default temperature baseline (Celsius) - typical skin temperature during sleep
+    TEMP_BASELINE_C = 35.5
+
     def __init__(self, reader: 'RingDataReader', use_ml: bool = True, night_index: int = -1):
         """Initialize with a RingDataReader.
 
@@ -86,6 +89,11 @@ class SleepAnalyzer:
         self._ml_result = None  # Cached SleepNet result
         self._score: Optional[SleepScore] = None
         self._ml_attempted = False
+
+        # Cached calculations for score parameters
+        self._latency_min: Optional[int] = None
+        self._restless_periods: Optional[int] = None
+        self._temp_deviation: Optional[int] = None
 
     def _get_ml_result(self):
         """Get SleepNet ML classification result (cached globally per reader + night)."""
@@ -306,8 +314,172 @@ class SleepAnalyzer:
             self._native_stages = self._reader.get_native_sleep_stages()
         return self._native_stages
 
+    def _get_bedtime_period(self) -> Tuple[int, int]:
+        """Get bedtime start/end timestamps (ms) for this night.
+
+        Returns:
+            Tuple of (bedtime_start_ms, bedtime_end_ms)
+        """
+        rd = self._reader.raw
+        if rd.HasField('bedtime_period'):
+            bp = rd.bedtime_period
+            starts = list(bp.bedtime_start)
+            ends = list(bp.bedtime_end)
+            if starts and ends:
+                # Normalize index (-1 = last)
+                idx = self._night_index if self._night_index >= 0 else len(starts) + self._night_index
+                if 0 <= idx < len(starts):
+                    return (starts[idx], ends[idx])
+        return (0, 0)
+
+    def _calculate_latency(self) -> int:
+        """Calculate sleep onset latency in minutes.
+
+        Latency = time from bedtime_start to first sleep epoch (non-awake).
+        Falls back to 10 minutes if calculation not possible.
+
+        Returns:
+            Latency in minutes
+        """
+        if self._latency_min is not None:
+            return self._latency_min
+
+        bedtime_start, _ = self._get_bedtime_period()
+        if bedtime_start == 0:
+            self._latency_min = 10  # Default fallback
+            return self._latency_min
+
+        stages = self.stages
+        timestamps = self.timestamps  # Unix seconds
+
+        if len(stages) == 0 or len(timestamps) == 0:
+            self._latency_min = 10
+            return self._latency_min
+
+        # Find first non-awake epoch (stage != 0)
+        bedtime_start_sec = bedtime_start / 1000.0  # Convert ms to seconds
+        first_sleep_time = None
+
+        for i, stage in enumerate(stages):
+            if stage != 0:  # Not awake = sleeping
+                first_sleep_time = timestamps[i]
+                break
+
+        if first_sleep_time is None:
+            self._latency_min = 10
+            return self._latency_min
+
+        # Calculate latency in minutes
+        latency_sec = first_sleep_time - bedtime_start_sec
+        self._latency_min = max(0, int(latency_sec / 60))
+
+        return self._latency_min
+
+    def _calculate_restless_periods(self) -> int:
+        """Calculate restless period count from motion data.
+
+        Counts periods of high motion (motion_count > threshold) during sleep.
+        Falls back to 5 if calculation not possible.
+
+        Returns:
+            Number of restless periods
+        """
+        if self._restless_periods is not None:
+            return self._restless_periods
+
+        bedtime_start, bedtime_end = self._get_bedtime_period()
+        if bedtime_start == 0:
+            self._restless_periods = 5  # Default fallback
+            return self._restless_periods
+
+        rd = self._reader.raw
+        if not rd.HasField('sleep_period_info'):
+            self._restless_periods = 5
+            return self._restless_periods
+
+        spi = rd.sleep_period_info
+        timestamps = list(spi.timestamp)
+        motion_counts = list(spi.motion_count)
+
+        if not timestamps or not motion_counts:
+            self._restless_periods = 5
+            return self._restless_periods
+
+        # Filter to this night's bedtime period
+        # A restless period is when motion_count exceeds threshold (>10 indicates significant movement)
+        RESTLESS_THRESHOLD = 10
+        restless_count = 0
+        in_restless = False
+
+        for ts, mc in zip(timestamps, motion_counts):
+            # Filter to bedtime period
+            if ts < bedtime_start or ts > bedtime_end:
+                continue
+
+            if mc > RESTLESS_THRESHOLD:
+                if not in_restless:
+                    restless_count += 1
+                    in_restless = True
+            else:
+                in_restless = False
+
+        self._restless_periods = restless_count
+        return self._restless_periods
+
+    def _calculate_temp_deviation(self) -> int:
+        """Calculate temperature deviation from baseline in centidegrees.
+
+        The native function expects temperature deviation in centidegrees
+        (e.g., +50 = 0.5C above baseline, -30 = 0.3C below baseline).
+
+        Returns:
+            Temperature deviation in centidegrees (int)
+        """
+        if self._temp_deviation is not None:
+            return self._temp_deviation
+
+        bedtime_start, bedtime_end = self._get_bedtime_period()
+        if bedtime_start == 0:
+            self._temp_deviation = 0  # Default fallback
+            return self._temp_deviation
+
+        rd = self._reader.raw
+        if not rd.HasField('sleep_temp_event'):
+            self._temp_deviation = 0
+            return self._temp_deviation
+
+        ste = rd.sleep_temp_event
+        timestamps = list(ste.timestamp)
+        temps = list(ste.temp)
+
+        if not timestamps or not temps:
+            self._temp_deviation = 0
+            return self._temp_deviation
+
+        # Filter temperatures to this night's bedtime period
+        night_temps = []
+        for ts, temp in zip(timestamps, temps):
+            if bedtime_start <= ts <= bedtime_end:
+                night_temps.append(temp)
+
+        if not night_temps:
+            self._temp_deviation = 0
+            return self._temp_deviation
+
+        # Calculate deviation from baseline (use highest temp like Oura's SleepSummary3)
+        highest_temp = max(night_temps)
+        deviation_c = highest_temp - self.TEMP_BASELINE_C
+
+        # Convert to centidegrees (multiply by 100)
+        self._temp_deviation = int(deviation_c * 100)
+
+        return self._temp_deviation
+
     def _estimate_wakeup_count(self) -> int:
-        """Estimate number of wake periods during sleep."""
+        """Estimate number of wake periods during sleep.
+
+        Stage encoding: 0=Awake, 1=Light, 2=Deep, 3=REM
+        """
         stages = self.stages
         if len(stages) == 0:
             return 0
@@ -316,9 +488,9 @@ class SleepAnalyzer:
         in_sleep = False
 
         for stage in stages:
-            if stage != 3:  # Not awake
+            if stage != 0:  # Not awake (sleeping)
                 in_sleep = True
-            elif in_sleep and stage == 3:  # Transition to awake
+            elif in_sleep and stage == 0:  # Transition to awake
                 wakeup_count += 1
                 in_sleep = False
 

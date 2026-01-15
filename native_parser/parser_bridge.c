@@ -131,7 +131,10 @@ static void free_event_list(EventList* list) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <hex_events_file>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <hex_events_file> [ring_time utc_millis]\n", argv[0]);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Parse ring events and output protobuf to stdout.\n");
+        fprintf(stderr, "Optional sync point args for correct timestamps.\n");
         return 1;
     }
 
@@ -301,14 +304,24 @@ int main(int argc, char* argv[]) {
     }
 
     // ========================================
-    // Set time mapping (ring_time=0 maps to Unix capture time)
-    // Capture time: Mon Jan 12 09:23:18 GMT+01:00 2026 = 1768120998
+    // Set time mapping using actual sync point
+    // With single parse_events() call, this should be fast
     // ========================================
     if (set_time_mapping) {
-        uint64_t unix_time = 1768120998ULL * 1000;  // milliseconds
         fprintf(stderr, "\n=== Setting initial time mapping ===\n");
-        fprintf(stderr, "  ring_time=0 -> unix_time=%llu ms\n", (unsigned long long)unix_time);
-        set_time_mapping(parser, 0, unix_time);
+        uint32_t ring_time = 0;
+        uint64_t utc_millis = 1768120998ULL * 1000;  // fallback
+
+        if (argc >= 4) {
+            ring_time = (uint32_t)strtoul(argv[2], NULL, 10);
+            utc_millis = strtoull(argv[3], NULL, 10);
+            fprintf(stderr, "  Using sync point: ring_time=%u, utc_millis=%llu\n",
+                    ring_time, (unsigned long long)utc_millis);
+        } else {
+            fprintf(stderr, "  Using fallback: ring_time=0, utc=%llu\n",
+                    (unsigned long long)utc_millis);
+        }
+        set_time_mapping(parser, ring_time, utc_millis);
     }
 
     // ========================================
@@ -324,29 +337,30 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "  RingData constructed\n");
 
     // ========================================
-    // Parse events ONE BY ONE (this gave 682KB output before)
+    // Concatenate all events into single buffer
     // ========================================
-    fprintf(stderr, "\n=== Parsing %zu events (%zu bytes) ONE BY ONE ===\n",
+    fprintf(stderr, "\n=== Concatenating %zu events (%zu bytes) ===\n",
             event_list->count, event_list->total_bytes);
-    uint32_t total_events_received = 0;
-    void* last_result = NULL;
 
+    uint8_t* all_data = malloc(event_list->total_bytes);
+    if (!all_data) { fprintf(stderr, "Failed to alloc concatenated buffer\n"); return 1; }
+
+    size_t offset = 0;
     for (size_t i = 0; i < event_list->count; i++) {
-        uint32_t events_received = 0;
-        void* parse_result = parse_events(parser, event_list->events[i].data,
-                                          (uint32_t)event_list->events[i].len, &events_received);
-        total_events_received += events_received;
-        last_result = parse_result;
-
-        // Progress every 1000 events
-        if (i % 1000 == 0) {
-            fprintf(stderr, "  Parsed %zu/%zu events, received=%u total\n",
-                    i, event_list->count, total_events_received);
-        }
+        memcpy(all_data + offset, event_list->events[i].data, event_list->events[i].len);
+        offset += event_list->events[i].len;
     }
-    fprintf(stderr, "  DONE: parsed %zu events, total_events_received=%u\n",
-            event_list->count, total_events_received);
-    fprintf(stderr, "  Last parse_result: %p\n", last_result);
+    fprintf(stderr, "  Concatenated %zu bytes\n", offset);
+
+    // ========================================
+    // Parse ALL events in ONE call
+    // ========================================
+    fprintf(stderr, "\n=== Parsing all data in SINGLE call ===\n");
+    uint32_t events_received = 0;
+    void* parse_result = parse_events(parser, all_data, (uint32_t)offset, &events_received);
+    fprintf(stderr, "  DONE: events_received=%u, result=%p\n", events_received, parse_result);
+
+    free(all_data);
 
     // ========================================
     // Process queued events
