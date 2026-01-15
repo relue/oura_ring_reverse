@@ -637,24 +637,27 @@ class OuraClient:
         overall_start_time = time.time()
         all_events: List[bytes] = []
         batch_num = 0
-        current_seq = start_seq
+        # NOTE: GetEvent parameter is a TIMESTAMP (ring_time), not a sequence number!
+        # We use the max timestamp from each batch to paginate, not event count.
+        current_timestamp = start_seq  # start_seq is actually a starting timestamp
 
         # Batch fetching loop - ring limits streaming to ~50K events per session
         while True:
             batch_num += 1
-            self._log('info', f"=== BATCH {batch_num}: Fetching from seq {current_seq} ===")
+            self._log('info', f"=== BATCH {batch_num}: Fetching from timestamp {current_timestamp} ===")
 
             # Reset state for this batch
             self.event_data.clear()
-            self.current_seq_num = current_seq
+            self.current_seq_num = current_timestamp  # Track for notification handler
             self.fetch_complete = False
             self.bytes_left = -1
 
             batch_start_time = time.time()
 
-            # Send GetEvent command (max_events=0 for streaming mode)
-            cmd = build_get_event_cmd(current_seq, max_events)
-            await self.send_command(cmd, f"GetEvent (seq={current_seq}, stream)")
+            # Send GetEvent command with timestamp (not sequence number!)
+            # Ring returns events with ring_time >= current_timestamp
+            cmd = build_get_event_cmd(current_timestamp, max_events)
+            await self.send_command(cmd, f"GetEvent (timestamp={current_timestamp}, stream)")
 
             # Wait for batch to complete
             last_count = 0
@@ -696,9 +699,21 @@ class OuraClient:
             all_events.extend(self.event_data)
             self._log('success', f"Batch {batch_num} complete: {batch_events} events")
 
-            # Update current sequence position
-            if batch_events > 0:
-                current_seq += batch_events
+            # Update current timestamp for next batch
+            # FIX: Use MAX timestamp from received events, not event count!
+            # This prevents getting the same events repeatedly.
+            if batch_events > 0 and self.event_data:
+                # Extract max timestamp from received events (bytes 2-5, little-endian)
+                timestamps = []
+                for e in self.event_data:
+                    if len(e) >= 6:
+                        ts = int.from_bytes(e[2:6], 'little')
+                        if ts > 0:
+                            timestamps.append(ts)
+                if timestamps:
+                    max_ts = max(timestamps)
+                    current_timestamp = max_ts + 1  # Next batch starts AFTER this timestamp
+                    self._log('info', f"Max timestamp in batch: {max_ts}, next request from {current_timestamp}")
 
             # Save to file between batches (prevents data loss if interrupted)
             if save_between_batches and len(all_events) > 0:
@@ -707,10 +722,12 @@ class OuraClient:
 
                 if append_mode:
                     # Append new events only (for incremental sync)
+                    # Index is based on total events, not timestamp
+                    start_idx = len(all_events) - batch_events
                     with open(filepath, 'a') as f:
-                        for event in self.event_data:  # Only this batch's events
+                        for idx, event in enumerate(self.event_data):
                             tag = event[0] if event else 0
-                            f.write(f"{current_seq - batch_events + self.event_data.index(event)}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
+                            f.write(f"{start_idx + idx}|0x{tag:02x}|{get_event_name(tag)}|{event.hex()}\n")
                     self._log('info', f"Appended {batch_events} events to {filepath}")
                 else:
                     # Overwrite with all events (for full fetch)
@@ -750,7 +767,7 @@ class OuraClient:
                             self._log('info', f"Time remaining: {time_diff_sec:.0f}s behind real-time")
 
                 # Ring's bytes_left=0 just means "session limit reached", not "no more data"
-                self._log('info', f"Continuing to next batch from seq {current_seq}...")
+                self._log('info', f"Continuing to next batch from timestamp {current_timestamp}...")
                 await asyncio.sleep(0.5)
                 continue
 

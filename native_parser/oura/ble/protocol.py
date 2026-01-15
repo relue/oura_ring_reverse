@@ -167,20 +167,30 @@ def parse_heartbeat(data: bytes) -> tuple | None:
 # Command Builders
 # ============================================================================
 
-def build_get_event_cmd(seq_num: int, max_events: int = 0) -> bytes:
-    """Build GetEvent command (0x10)."""
-    # Format: 10 09 <event_seq_num:4-bytes LE> <max_events:1-byte> <flags:4-bytes LE>
+def build_get_event_cmd(timestamp: int, max_events: int = 0) -> bytes:
+    """Build GetEvent command (0x10).
+
+    Args:
+        timestamp: Ring timestamp (ring_time in deciseconds). Events with
+                   ring_time >= timestamp will be returned. Use 0 to get all events.
+                   NOTE: This is NOT a sequence number - it's a timestamp!
+        max_events: Maximum events per request (0 = streaming mode, up to ~50K)
+
+    Returns:
+        11-byte command: [0x10] [0x09] [timestamp:4B LE] [max:1B] [flags:4B]
+    """
+    # Format: 10 09 <timestamp:4-bytes LE> <max_events:1-byte> <flags:4-bytes LE>
     cmd = bytearray(11)
     cmd[0] = 0x10  # REQUEST_TAG
     cmd[1] = 0x09  # length
 
-    # Event sequence number (4 bytes, little endian)
-    cmd[2] = seq_num & 0xFF
-    cmd[3] = (seq_num >> 8) & 0xFF
-    cmd[4] = (seq_num >> 16) & 0xFF
-    cmd[5] = (seq_num >> 24) & 0xFF
+    # Timestamp (ring_time in deciseconds, 4 bytes, little endian)
+    cmd[2] = timestamp & 0xFF
+    cmd[3] = (timestamp >> 8) & 0xFF
+    cmd[4] = (timestamp >> 16) & 0xFF
+    cmd[5] = (timestamp >> 24) & 0xFF
 
-    # Max events (0 = fetch all)
+    # Max events (0 = streaming mode)
     cmd[6] = max_events & 0xFF
 
     # Flags (4 bytes, all zeros)
