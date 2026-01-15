@@ -807,6 +807,55 @@ async def get_available_nights():
     return {"nights": nights, "count": len(nights)}
 
 
+async def check_and_parse_if_stale() -> bool:
+    """Check if protobuf is stale and reparse if needed.
+
+    Returns True if data was reparsed, False otherwise.
+    """
+    global _analyzer, _reader
+
+    events_file = INPUT_DIR / "ring_events.txt"
+    protobuf_file = INPUT_DIR / "ring_data.pb"
+
+    if not events_file.exists():
+        return False
+
+    needs_parse = False
+    if not protobuf_file.exists():
+        needs_parse = True
+    else:
+        # Check if events file is newer than protobuf
+        events_mtime = events_file.stat().st_mtime
+        pb_mtime = protobuf_file.stat().st_mtime
+        needs_parse = events_mtime > pb_mtime
+
+    if needs_parse:
+        print("[auto-parse] Protobuf is stale, running parser...")
+        try:
+            from oura.native.parser import parse_events_sync, check_parser_available
+
+            available, msg = check_parser_available()
+            if not available:
+                print(f"[auto-parse] Parser not available: {msg}")
+                return False
+
+            result = parse_events_sync()
+            if result.success:
+                print(f"[auto-parse] Parsed {result.input_events} events -> {result.output_size} bytes")
+                # Clear cached reader/analyzer
+                _analyzer = None
+                _reader = None
+                return True
+            else:
+                print(f"[auto-parse] Parse failed: {result.error}")
+                return False
+        except Exception as e:
+            print(f"[auto-parse] Error: {e}")
+            return False
+
+    return False
+
+
 @app.get("/dashboard/sleep-stages", response_model=SleepStagesDashboard)
 async def get_sleep_stages_dashboard(
     night: int = Query(default=-1, description="Night index (-1 = last/most recent)")
@@ -816,7 +865,11 @@ async def get_sleep_stages_dashboard(
     Uses the high-level SleepAnalyzer which automatically uses SleepNet ML
     for proper REM classification when available.
     Timestamps come from ring_events.txt via time sync for real UTC times.
+    Auto-parses if protobuf is stale.
     """
+    # Auto-parse if data is stale
+    await check_and_parse_if_stale()
+
     reader = get_reader()  # Reader with real UTC timestamps
     sleep_analyzer = SleepAnalyzer(reader, night_index=night)  # ML with night selection
 
@@ -1011,6 +1064,9 @@ async def ble_websocket(websocket: WebSocket):
             elif action == "parse":
                 await ble_manager.parse_events()
 
+            elif action == "update-ring":
+                await ble_manager.update_ring()
+
             else:
                 await websocket.send_json({
                     "type": "error",
@@ -1068,6 +1124,70 @@ async def reload_ring_data():
     _analyzer = None
     _reader = None
     return {"status": "ok", "message": "Data cache cleared, will reload on next request"}
+
+
+class SyncInfo(BaseModel):
+    last_updated: Optional[str]
+    last_synced_seq: Optional[int]
+    events_count: Optional[int]
+    protobuf_exists: bool
+    needs_parse: bool
+
+
+@app.get("/sync-info", response_model=SyncInfo)
+async def get_sync_info():
+    """Get sync point info and data staleness.
+
+    Returns timestamp of last sync and whether parsing is needed.
+    """
+    import json
+
+    sync_point_file = INPUT_DIR / "sync_point.json"
+    events_file = INPUT_DIR / "ring_events.txt"
+    protobuf_file = INPUT_DIR / "ring_data.pb"
+
+    last_updated = None
+    last_synced_seq = None
+    events_count = None
+
+    # Load sync point
+    if sync_point_file.exists():
+        try:
+            with open(sync_point_file, 'r') as f:
+                sync_data = json.load(f)
+                last_updated = sync_data.get('timestamp')
+                last_synced_seq = sync_data.get('last_synced_seq')
+        except:
+            pass
+
+    # Count events
+    if events_file.exists():
+        try:
+            with open(events_file, 'r') as f:
+                events_count = sum(1 for _ in f)
+        except:
+            pass
+
+    # Check if protobuf needs update
+    protobuf_exists = protobuf_file.exists()
+    needs_parse = False
+
+    if events_file.exists():
+        if not protobuf_exists:
+            needs_parse = True
+        else:
+            # Check if events file is newer than protobuf
+            events_mtime = events_file.stat().st_mtime
+            pb_mtime = protobuf_file.stat().st_mtime
+            needs_parse = events_mtime > pb_mtime
+
+    return SyncInfo(
+        last_updated=last_updated,
+        last_synced_seq=last_synced_seq,
+        events_count=events_count,
+        protobuf_exists=protobuf_exists,
+        needs_parse=needs_parse,
+    )
 
 
 if __name__ == "__main__":

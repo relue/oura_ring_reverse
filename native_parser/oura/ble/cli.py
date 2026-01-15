@@ -284,11 +284,12 @@ async def main():
 
         # Incremental data sync (like Oura app)
         if args.get_data_incremental:
-            # Sync time first
             print("\n=== INCREMENTAL SYNC (like Oura app) ===")
             print("This only fetches NEW events since last sync.\n")
-            await client.sync_time()
-            await asyncio.sleep(1)
+            # Load existing sync point (don't sync time - just use saved reference)
+            if not client.load_sync_point(args.sync_point_file):
+                print("ERROR: No sync point found. Run --sync-time or --get-all-data first.")
+                return 1
 
             # Build filter
             event_filter = None

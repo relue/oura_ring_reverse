@@ -8,6 +8,13 @@ from oura.native.parser import (
     ParseResult,
 )
 
+# AppEvent serialization for 1:1 Oura native calls
+from oura.native.app_event import (
+    AppEventSerializer,
+    SleepCalculationInput,
+    create_sleep_input_from_protobuf,
+)
+
 # Import from the working QEMU-based wrapper
 try:
     from oura_ecore import EcoreWrapper, IbiResult, SleepScoreResult

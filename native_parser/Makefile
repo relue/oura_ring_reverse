@@ -16,7 +16,11 @@ TEST_DATA = ../analysis_scripts/ring_events_20260112_092318.txt
 
 .PHONY: all clean test test-load check-deps ibi-test
 
-all: parser_bridge ibi_correction_bridge liblog.so libc_stub.so
+all: parser_bridge ibi_correction_bridge sleep_full_bridge liblog.so libc_stub.so
+
+# Build sleep full bridge (for calling ecore_sleep_final_calculate_sleep)
+sleep_full_bridge: sleep_full_bridge.c
+	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
 
 # Build liblog.so stub (provides __android_log_* functions)
 liblog.so: bionic_stub.c

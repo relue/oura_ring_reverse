@@ -245,38 +245,43 @@ class SleepAnalyzer:
             from oura_ecore import EcoreWrapper
             ecore = EcoreWrapper()
 
+            # Calculate sleep midpoint for circadian scoring
+            bedtime_start, bedtime_end = self._get_bedtime_period()
+            if bedtime_start > 0 and bedtime_end > 0:
+                midpoint_ms = (bedtime_start + bedtime_end) // 2
+                # Convert to seconds from midnight
+                from datetime import datetime
+                dt = datetime.utcfromtimestamp(midpoint_ms / 1000)
+                sleep_midpoint_sec = dt.hour * 3600 + dt.minute * 60 + dt.second
+            else:
+                sleep_midpoint_sec = 10800  # Default 3 AM
+
             result = ecore.calculate_sleep_score(
                 total_sleep_min=int(durations.total_sleep),
                 deep_sleep_min=int(durations.deep),
-                rem_sleep_min=int(durations.rem),  # Now uses ML REM!
+                rem_sleep_min=int(durations.rem),  # Uses ML REM!
+                light_sleep_min=int(durations.light),
                 efficiency=int(durations.efficiency),
-                latency_min=10,  # Default estimate
+                latency_min=self._calculate_latency(),
                 wakeup_count=self._estimate_wakeup_count(),
                 awake_sec=int(durations.awake * 60),
-                restless_periods=5,  # Default estimate
-                temp_deviation=0,
+                restless_periods=self._calculate_restless_periods(),
+                temp_deviation=self._calculate_temp_deviation(),
+                got_up_count=0,  # TODO: extract from data
+                sleep_midpoint_sec=sleep_midpoint_sec,
             )
-
-            # Calculate REM contributor (20-25% optimal)
-            rem_pct = (durations.rem / durations.total_sleep * 100) if durations.total_sleep > 0 else 0
-            if rem_pct >= 20:
-                rem_contrib = 100
-            elif rem_pct >= 15:
-                rem_contrib = 80
-            elif rem_pct >= 10:
-                rem_contrib = 60
-            else:
-                rem_contrib = 40
 
             self._score = SleepScore(
                 score=result.score,
-                total_sleep=result.total_contrib,
+                total_sleep=result.total_sleep_contrib,
                 efficiency=result.efficiency_contrib,
-                restfulness=result.restfulness_contrib,
-                rem_sleep=rem_contrib,
-                deep_sleep=result.deep_contrib,
+                restfulness=result.disturbances_contrib,
+                rem_sleep=result.rem_sleep_contrib,
+                deep_sleep=result.deep_sleep_contrib,
                 latency=result.latency_contrib,
-                timing=result.timing_contrib,
+                # Circadian timing is factored into main score via init_limits,
+                # not returned separately. Use reasonable default.
+                timing=80,
             )
         except Exception:
             # Fallback to basic score calculation
@@ -406,8 +411,9 @@ class SleepAnalyzer:
             return self._restless_periods
 
         # Filter to this night's bedtime period
-        # A restless period is when motion_count exceeds threshold (>10 indicates significant movement)
-        RESTLESS_THRESHOLD = 10
+        # A restless period is when motion_count exceeds threshold
+        # Testing shows threshold ~15-20 produces reasonable counts (5-30 typical)
+        RESTLESS_THRESHOLD = 15
         restless_count = 0
         in_restless = False
 

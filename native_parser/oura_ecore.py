@@ -52,15 +52,19 @@ class HrResult:
 
 @dataclass
 class SleepScoreResult:
-    """Sleep score result with contributor scores"""
+    """Sleep score result with contributor scores (from native ecore_sleep_score_calculate_minutes).
+
+    Note: The native function returns 6 contributors. Circadian alignment is factored
+    into the final score via init_limits, not returned as a separate contributor.
+    """
     score: int  # Overall sleep score (0-100)
-    total_contrib: int  # Total sleep time contributor
-    contrib2: int  # Unknown contributor
+    total_sleep_contrib: int  # Total sleep time contributor
+    deep_sleep_contrib: int  # Deep sleep contributor
+    rem_sleep_contrib: int  # REM sleep contributor
     efficiency_contrib: int  # Efficiency contributor
-    restfulness_contrib: int  # Restfulness contributor
-    timing_contrib: int  # Timing/alignment contributor
-    deep_contrib: int  # Deep sleep contributor
-    latency_contrib: int  # Latency contributor
+    latency_contrib: int  # Latency contributor (byte 5, combines latency + awake time)
+    disturbances_contrib: int  # Disturbances/restfulness contributor (byte 6, restless periods)
+    quality_flag: int = 1  # Quality indicator: 1=good, higher values indicate deficits in deep/REM
 
 
 @dataclass
@@ -146,14 +150,16 @@ class EcoreWrapper:
             )
 
     def _run_bridge(self, bridge_name: str, input_data: str,
-                    timeout: int = 60) -> Tuple[str, str]:
+                    timeout: int = 60, use_args: bool = False) -> Tuple[str, str]:
         """
         Run a bridge binary via QEMU.
 
         Args:
             bridge_name: Name of bridge binary (e.g., 'ibi_correction_bridge_v9')
-            input_data: CSV data to send to stdin
+            input_data: CSV data to send to stdin OR command line argument
             timeout: Timeout in seconds
+            use_args: If True, pass input_data as command line argument instead of stdin.
+                      Required for some bridges due to QEMU stdin pipe issues.
 
         Returns:
             Tuple of (stdout, stderr)
@@ -173,14 +179,26 @@ class EcoreWrapper:
             str(bridge_path)
         ]
 
-        result = subprocess.run(
-            cmd,
-            input=input_data,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=timeout
-        )
+        if use_args:
+            # Pass data as command line argument (avoids QEMU stdin pipe bug)
+            cmd.append(input_data.strip())
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=timeout
+            )
+        else:
+            # Standard stdin piping
+            result = subprocess.run(
+                cmd,
+                input=input_data,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=timeout
+            )
 
         return result.stdout, result.stderr
 
@@ -299,63 +317,95 @@ class EcoreWrapper:
         total_sleep_min: int,
         deep_sleep_min: int,
         rem_sleep_min: int,
-        efficiency: int,
+        light_sleep_min: int = None,
+        efficiency: int = 85,
         latency_min: int = 10,
         wakeup_count: int = 2,
         awake_sec: int = 300,
         restless_periods: int = 4,
-        temp_deviation: int = 0
+        temp_deviation: int = 0,
+        got_up_count: int = 0,
+        sleep_midpoint_sec: int = 10800,  # 3 AM default
     ) -> SleepScoreResult:
         """
-        Calculate sleep score using native Oura library.
+        Calculate sleep score using native Oura library (STATELESS).
 
         This calls ecore_sleep_score_calculate_minutes directly via the
-        sleep_score_bridge binary.
+        sleep_score_minutes_ndk binary. This is a stateless function that
+        doesn't require library initialization.
 
         Args:
             total_sleep_min: Total sleep time in minutes (e.g., 420 for 7h)
             deep_sleep_min: Deep sleep time in minutes
             rem_sleep_min: REM sleep time in minutes
-            efficiency: Sleep efficiency percentage (0-100)
+            light_sleep_min: Light sleep time (calculated from total if None)
+            efficiency: Sleep efficiency percentage (0-100, default: 85)
             latency_min: Time to fall asleep in minutes (default: 10)
             wakeup_count: Number of times woken up (default: 2)
             awake_sec: Time awake during sleep in seconds (default: 300)
             restless_periods: Number of restless periods (default: 4)
             temp_deviation: Temperature deviation in centidegrees (default: 0)
+            got_up_count: Number of times got out of bed (default: 0)
+            sleep_midpoint_sec: Sleep midpoint in seconds from midnight (default: 10800 = 3AM)
 
         Returns:
-            SleepScoreResult with overall score and contributor scores
+            SleepScoreResult with overall score and 7 contributor scores
 
         Example:
             >>> ecore = EcoreWrapper()
             >>> result = ecore.calculate_sleep_score(
             ...     total_sleep_min=420,  # 7h
-            ...     deep_sleep_min=84,    # 84min
-            ...     rem_sleep_min=105,    # 105min
+            ...     deep_sleep_min=84,    # ~20%
+            ...     rem_sleep_min=105,    # ~25%
             ...     efficiency=88,
             ... )
             >>> print(f"Sleep score: {result.score}")
-            Sleep score: 52
+            Sleep score: 68
         """
-        # Format input CSV
-        input_csv = f"{total_sleep_min},{deep_sleep_min},{rem_sleep_min},{efficiency},{latency_min},{wakeup_count},{awake_sec},{restless_periods},{temp_deviation}\n"
+        # Calculate light sleep if not provided
+        if light_sleep_min is None:
+            light_sleep_min = max(0, total_sleep_min - deep_sleep_min - rem_sleep_min)
 
-        # Run bridge
-        stdout, stderr = self._run_bridge("sleep_score_bridge", input_csv)
+        # Format input as comma-separated values (12 parameters)
+        # total,deep,rem,light,eff,latency,wakeups,awake_sec,restless,temp_dev,got_up,midpoint
+        input_args = (
+            f"{total_sleep_min},{deep_sleep_min},{rem_sleep_min},{light_sleep_min},"
+            f"{efficiency},{latency_min},{wakeup_count},{awake_sec},{restless_periods},"
+            f"{temp_deviation},{got_up_count},{sleep_midpoint_sec}"
+        )
 
-        # Parse output
-        reader = csv.DictReader(StringIO(stdout))
-        row = next(reader)
+        # Run bridge with command line args (use_args=True avoids QEMU stdin pipe bug)
+        stdout, stderr = self._run_bridge("sleep_score_minutes_ndk", input_args, use_args=True)
+
+        # Parse output - format is:
+        # sleepScore
+        # <score>
+        # contributors
+        # <total>,<deep>,<rem>,<eff>,<latency>,<disturb>
+        # qualityFlag
+        # <flag>
+        lines = stdout.strip().split('\n')
+        score = 0
+        contribs = [0, 0, 0, 0, 0, 0]
+        quality_flag = 1
+
+        for i, line in enumerate(lines):
+            if line == 'sleepScore' and i + 1 < len(lines):
+                score = int(lines[i + 1])
+            elif line == 'contributors' and i + 1 < len(lines):
+                contribs = [int(x) for x in lines[i + 1].split(',')]
+            elif line == 'qualityFlag' and i + 1 < len(lines):
+                quality_flag = int(lines[i + 1])
 
         return SleepScoreResult(
-            score=int(row["sleepScore"]),
-            total_contrib=int(row["totalContrib"]),
-            contrib2=int(row["contrib2"]),
-            efficiency_contrib=int(row["efficiencyContrib"]),
-            restfulness_contrib=int(row["restfulnessContrib"]),
-            timing_contrib=int(row["timingContrib"]),
-            deep_contrib=int(row["deepContrib"]),
-            latency_contrib=int(row["latencyContrib"])
+            score=score,
+            total_sleep_contrib=contribs[0] if len(contribs) > 0 else 0,
+            deep_sleep_contrib=contribs[1] if len(contribs) > 1 else 0,
+            rem_sleep_contrib=contribs[2] if len(contribs) > 2 else 0,
+            efficiency_contrib=contribs[3] if len(contribs) > 3 else 0,
+            latency_contrib=contribs[4] if len(contribs) > 4 else 0,
+            disturbances_contrib=contribs[5] if len(contribs) > 5 else 0,
+            quality_flag=quality_flag,
         )
 
     def calculate_readiness_score(self, readiness_data: dict) -> Optional[ReadinessScore]:
@@ -461,10 +511,13 @@ if __name__ == "__main__":
             wakeup_count=2,
         )
         print(f"Sleep score: {sleep_result.score}")
-        print(f"  Total contributor: {sleep_result.total_contrib}")
+        print(f"  Total sleep contributor: {sleep_result.total_sleep_contrib}")
+        print(f"  Deep sleep contributor: {sleep_result.deep_sleep_contrib}")
+        print(f"  REM sleep contributor: {sleep_result.rem_sleep_contrib}")
         print(f"  Efficiency contributor: {sleep_result.efficiency_contrib}")
-        print(f"  Deep sleep contributor: {sleep_result.deep_contrib}")
         print(f"  Latency contributor: {sleep_result.latency_contrib}")
+        print(f"  Disturbances contributor: {sleep_result.disturbances_contrib}")
+        print(f"  Quality flag: {sleep_result.quality_flag}")
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

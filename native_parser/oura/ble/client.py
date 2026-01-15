@@ -838,27 +838,10 @@ class OuraClient:
         )
 
         if events:
-            # Calculate new last_synced_seq
-            # The sequence number is the starting seq + number of events fetched
+            # Calculate new last_synced_seq for logging only
             new_last_synced_seq = start_seq + len(events) - 1
-            self._log('success', f"Fetched {len(events)} new events")
-            self._log('info', f"Updating last_synced_seq: {last_synced_seq} -> {new_last_synced_seq}")
-
-            # Save updated sync point with new last_synced_seq
-            # Note: sync_time() should have been called before this, so time_sync_points should be populated
-            if self.time_sync_points:
-                self.save_sync_point(
-                    filename=sync_point_file,
-                    description='Incremental sync via oura.ble',
-                    last_synced_seq=new_last_synced_seq
-                )
-            else:
-                # Update just the last_synced_seq in existing file
-                sync_point['last_synced_seq'] = new_last_synced_seq
-                filepath = self.data_dir / (sync_point_file or SYNC_POINT_FILE)
-                with open(filepath, 'w') as f:
-                    json.dump(sync_point, f, indent=2)
-                self._log('info', f"Updated last_synced_seq in {filepath}")
+            self._log('success', f"Fetched {len(events)} new events (seq {start_seq} -> {new_last_synced_seq})")
+            # Note: sync_point.json is NOT updated here - use sync_time() to update it
         else:
             self._log('warn', "No events fetched")
 
@@ -924,6 +907,26 @@ class OuraClient:
         except Exception as e:
             self._log('warn', f"Could not load sync point: {e}")
             return {}
+
+    def load_sync_point(self, filename: Optional[str] = None) -> bool:
+        """Load sync point from file and populate time_sync_points for time conversion.
+
+        Use this instead of sync_time() when you want to use existing sync data
+        without communicating with the ring.
+
+        Returns:
+            True if sync point loaded successfully, False otherwise.
+        """
+        sync_point = self._load_sync_point(filename)
+        if not sync_point or 'ring_time' not in sync_point or 'utc_millis' not in sync_point:
+            self._log('error', "No valid sync point found - run sync_time() first")
+            return False
+
+        # Populate time_sync_points from loaded data
+        self.time_sync_points = [sync_point]
+        self._log('info', f"Loaded sync point: ring_time={sync_point['ring_time']}, "
+                         f"timestamp={sync_point.get('timestamp', 'N/A')}")
+        return True
 
     def save_sync_point(
         self,

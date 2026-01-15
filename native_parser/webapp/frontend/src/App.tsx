@@ -107,6 +107,17 @@ function useRawData(endpoint: string, limit = 100) {
   })
 }
 
+function useSyncInfo() {
+  return useQuery({
+    queryKey: ['sync-info'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/sync-info`)
+      return res.json()
+    },
+    refetchInterval: 30000, // Refresh every 30s
+  })
+}
+
 // ============== Base UI Components ==============
 
 function Navigation() {
@@ -434,11 +445,13 @@ function SleepStagesDashboard() {
   const [selectedNight, setSelectedNight] = useState(-1)
   const { data: nightsData } = useAvailableNights()
   const { data, isLoading, error } = useSleepStagesDashboard(selectedNight)
+  const { data: syncInfo } = useSyncInfo()
 
   if (isLoading) return <LoadingState message="ANALYZING SLEEP DATA..." />
   if (error) return <ErrorState message="FAILED TO LOAD SLEEP DATA" />
 
   const nights = nightsData?.nights || []
+  const lastUpdated = syncInfo?.last_updated ? new Date(syncInfo.last_updated).toLocaleString() : null
 
   // Hypnogram: Deep at top (3), Awake at bottom (0)
   // Backend stage: 0=Deep, 1=Light, 2=REM, 3=Awake
@@ -456,8 +469,15 @@ function SleepStagesDashboard() {
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <PageHeader title="SLEEP::STAGES" accentColor={COLORS.purple} />
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <PageHeader title="SLEEP::STAGES" accentColor={COLORS.purple} />
+          {lastUpdated && (
+            <div className="text-xs font-mono text-gray-500 -mt-6 ml-6">
+              Ring data last updated: <span className="text-purple-400">{lastUpdated}</span>
+            </div>
+          )}
+        </div>
 
         {/* Night Selector */}
         {nights.length > 0 && (
@@ -972,14 +992,15 @@ function useBLEWebSocket() {
             setProgress(null)
             setLogs(prev => [...prev, {
               level: msg.success ? 'success' : 'error',
-              message: `${msg.action} ${msg.success ? 'completed' : 'failed'}${msg.event_count ? ` (${msg.event_count} events)` : ''}`,
+              message: `${msg.action} ${msg.success ? 'completed' : 'failed'}${msg.event_count !== undefined ? ` (${msg.event_count} events)` : ''}`,
               time: new Date()
             }])
-            // Invalidate queries if data was fetched
-            if (msg.action === 'get-data' && msg.success) {
+            // Invalidate queries if data was fetched or updated
+            if ((msg.action === 'get-data' || msg.action === 'update-ring' || msg.action === 'parse') && msg.success) {
               queryClient.invalidateQueries({ queryKey: ['dashboard'] })
               queryClient.invalidateQueries({ queryKey: ['summary'] })
               queryClient.invalidateQueries({ queryKey: ['raw'] })
+              queryClient.invalidateQueries({ queryKey: ['sync-info'] })
             }
             break
           case 'error':
@@ -1213,6 +1234,7 @@ function ConfirmDialog({ action, onConfirm, onCancel }: {
 // Main Ring Control Page
 function RingControlPage() {
   const { status, logs, heartbeat, heartbeatHistory, progress, wsConnected, send, clearLogs, clearHeartbeat } = useBLEWebSocket()
+  const { data: syncInfo, refetch: refetchSyncInfo } = useSyncInfo()
   const [isHeartbeatActive, setIsHeartbeatActive] = useState(false)
   const [adapters, setAdapters] = useState<string[]>(['hci0'])
   const [selectedAdapter, setSelectedAdapter] = useState('hci0')
@@ -1238,6 +1260,10 @@ function RingControlPage() {
   }
   const handleAuth = () => send('auth')
   const handleSyncTime = () => send('sync-time')
+  const handleUpdateRing = () => {
+    send('update-ring')
+    // Refetch sync info after update completes (via WebSocket complete event)
+  }
   const handleGetData = () => send('get-data', { filters: { preset: selectedFilter } })
 
   const handleHeartbeat = () => {
@@ -1281,6 +1307,27 @@ function RingControlPage() {
               </span>
             </div>
           )}
+          {/* Ring Data Info */}
+          <div className="mt-4 pt-4 border-t border-cyan-500/20">
+            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Ring Data</div>
+            {syncInfo?.last_updated ? (
+              <>
+                <div className="text-xs font-mono text-gray-400">
+                  Last updated: <span className="text-cyan-400">{new Date(syncInfo.last_updated).toLocaleString()}</span>
+                </div>
+                <div className="text-xs font-mono text-gray-400 mt-1">
+                  Events: <span className="text-cyan-400">{syncInfo.events_count?.toLocaleString() || 0}</span>
+                </div>
+                {syncInfo.needs_parse && (
+                  <div className="text-xs font-mono text-orange-400 mt-1">
+                    ⚠ Needs parsing
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-xs font-mono text-gray-600">No sync data</div>
+            )}
+          </div>
         </Panel>
 
         {/* Configuration Panel */}
@@ -1379,33 +1426,24 @@ function RingControlPage() {
         </Panel>
       )}
 
-      {/* Data Fetch Options */}
-      <Panel color={COLORS.cyan} title="Data Fetch" className="mb-8">
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {['all', 'sleep', 'heart_rate', 'temperature', 'motion', 'spo2'].map(filter => (
-              <FilterChip
-                key={filter}
-                label={filter.replace('_', ' ')}
-                active={selectedFilter === filter}
-                onClick={() => setSelectedFilter(filter)}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-4">
-            <ActionButton
-              label="Get Data"
-              onClick={handleGetData}
-              disabled={!status.authenticated || status.is_busy}
-              color={COLORS.green}
-            />
-            {progress && (
-              <div className="flex-1">
-                <div className="text-xs text-gray-500 mb-1">{progress.label}</div>
-                <ProgressBar value={progress.current} max={progress.total} color={COLORS.cyan} />
-              </div>
-            )}
-          </div>
+      {/* Update Ring - Main action */}
+      <Panel color={COLORS.green} title="Update Ring" subtitle="Incremental sync + parse" className="mb-8">
+        <div className="flex items-center gap-4 flex-wrap">
+          <ActionButton
+            label="⟳ Update Ring"
+            onClick={handleUpdateRing}
+            disabled={!status.authenticated || status.is_busy}
+            color={COLORS.green}
+          />
+          <span className="text-xs text-gray-500 font-mono">
+            Fetches new events since last sync, then parses to protobuf
+          </span>
+          {progress && (
+            <div className="flex-1 min-w-48">
+              <div className="text-xs text-gray-500 mb-1">{progress.label}</div>
+              <ProgressBar value={progress.current} max={progress.total} color={COLORS.cyan} />
+            </div>
+          )}
         </div>
       </Panel>
 

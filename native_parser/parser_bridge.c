@@ -402,7 +402,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "  Internal protobuf size: %zu bytes (from get_protobuf_size)\n", internal_pb_size);
     }
 
-    if (pb_size > 0 && pb_size < 100*1024*1024) {
+    if (pb_size > 0 && pb_size < 300*1024*1024) {  // Allow up to 300MB
         uint8_t* output = malloc(pb_size);
         if (!output) { fprintf(stderr, "Failed to alloc output\n"); return 1; }
 

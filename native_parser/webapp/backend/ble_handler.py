@@ -417,6 +417,101 @@ class BLEConnectionManager:
             self.current_action = None
             await self.send_status()
 
+    async def update_ring(self) -> bool:
+        """Update ring data: incremental sync + parse.
+
+        This is the main "Update Ring" action for the UI.
+        Does NOT sync time - uses existing sync point for time reference.
+        """
+        if not self.client or not self.client.is_authenticated:
+            await self.send_log("error", "Not authenticated")
+            return False
+
+        if self.is_busy:
+            await self.send_log("error", "Operation in progress")
+            return False
+
+        self.is_busy = True
+        self.current_action = "update-ring"
+        await self.send_status()
+
+        try:
+            # Step 1: Load existing sync point (don't call sync_time!)
+            await self.send_log("info", "Loading sync point...")
+            if not self.client.load_sync_point():
+                await self.send_log("error", "No sync point found. Run full Get Data first.")
+                return False
+
+            # Step 2: Fetch incremental data
+            await self.send_log("info", "Fetching new events...")
+            data = await self.client.get_data_incremental()
+
+            if data:
+                # Save events to file
+                self.client.save_events_to_file(append=True)
+                await self.send_log("success", f"Fetched {len(data)} new events")
+
+                # Step 3: Parse events to protobuf
+                await self.send_log("info", "Parsing events...")
+                parse_success = await self._do_parse()
+
+                if parse_success:
+                    await self.broadcast({
+                        "type": "complete",
+                        "action": "update-ring",
+                        "success": True,
+                        "event_count": len(data)
+                    })
+                    return True
+                else:
+                    await self.send_log("error", "Parse failed after sync")
+                    return False
+            else:
+                await self.send_log("info", "No new events to fetch")
+                await self.broadcast({
+                    "type": "complete",
+                    "action": "update-ring",
+                    "success": True,
+                    "event_count": 0
+                })
+                return True
+
+        except Exception as e:
+            await self.send_log("error", f"Update ring error: {e}")
+            return False
+        finally:
+            self.is_busy = False
+            self.current_action = None
+            await self.send_status()
+
+    async def _do_parse(self) -> bool:
+        """Internal helper to run parser and refresh cache."""
+        from oura.native.parser import parse_events_async, check_parser_available
+
+        available, msg = check_parser_available()
+        if not available:
+            await self.send_log("error", f"Parser not available: {msg}")
+            return False
+
+        def log_callback(level: str, message: str):
+            asyncio.create_task(self.send_log(level, message))
+
+        result = await parse_events_async(log_callback=log_callback)
+
+        if result.success:
+            await self.send_log("success",
+                f"Parsed {result.input_events} events -> {result.output_size} bytes")
+
+            # Clear cached reader so dashboard uses fresh data
+            import main
+            main._analyzer = None
+            main._reader = None
+            await self.send_log("info", "Data cache refreshed")
+            return True
+        else:
+            await self.send_log("error", f"Parse failed: {result.error}")
+            return False
+
     async def parse_events(self) -> bool:
         """Parse events file to protobuf using native parser."""
         if self.is_busy:
