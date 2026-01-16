@@ -812,16 +812,15 @@ class OuraClient:
         event_filter: Optional[EventFilter] = None,
         sync_point_file: Optional[str] = None
     ) -> List[bytes]:
-        """Get only NEW events since last sync (like Oura app does).
+        """Get only NEW events since last sync using timestamp-based pagination.
 
-        This method tracks `last_synced_seq` in the sync_point.json file and only
-        fetches events with sequence numbers greater than the last sync. This
-        prevents duplicate data from being fetched across multiple syncs.
+        This method tracks `last_synced_ring_time` in the sync_point.json file and only
+        fetches events with timestamps greater than the last sync.
 
-        How it works (same approach as original Oura app):
-        1. Load `last_synced_seq` from sync_point.json (default: 0)
-        2. Fetch events with seq > last_synced_seq
-        3. After successful fetch, update `last_synced_seq` in sync_point.json
+        How it works (timestamp-based approach):
+        1. Load `last_synced_ring_time` from sync_point.json (default: 0)
+        2. Fetch events with ring_time > last_synced_ring_time
+        3. After successful fetch, extract max ring_time and update sync_point.json
 
         Args:
             event_filter: Optional event type filter
@@ -834,35 +833,79 @@ class OuraClient:
             self._log('error', "Must be authenticated first!")
             return []
 
-        # Load existing sync point to get last_synced_seq
-        sync_point = self._load_sync_point(sync_point_file)
-        last_synced_seq = sync_point.get('last_synced_seq', 0)
+        # Scan events file to find max timestamp - this is our starting point
+        events_file = self.data_dir / "ring_events.txt"
+        last_ring_time = 0
+        if events_file.exists():
+            last_ring_time = self._find_max_timestamp_in_file(events_file)
+            self._log('info', f"Events file max ring_time: {last_ring_time}")
 
         self._log('info', "="*60)
-        self._log('info', "INCREMENTAL SYNC (like Oura app)")
+        self._log('info', "INCREMENTAL SYNC (timestamp-based)")
         self._log('info', "="*60)
-        self._log('info', f"Last synced sequence: {last_synced_seq}")
 
-        # Fetch from last_synced_seq + 1, batching until no more events
-        start_seq = last_synced_seq + 1 if last_synced_seq > 0 else 0
-        self._log('info', f"Fetching from seq {start_seq}...")
+        # Fetch from last_ring_time + 1 to avoid duplicates
+        start_timestamp = last_ring_time + 1 if last_ring_time > 0 else 0
+        self._log('info', f"Fetching events with ring_time >= {start_timestamp}...")
 
         events = await self.get_data(
-            start_seq=start_seq,
+            start_seq=start_timestamp,  # This is actually a timestamp!
             event_filter=event_filter,
-            fetch_all=True,  # Fetch all new events in batches (until 0 events)
+            fetch_all=True,  # Fetch all new events in batches
             append_mode=True  # Append to existing file, don't overwrite
         )
 
         if events:
-            # Calculate new last_synced_seq for logging only
-            new_last_synced_seq = start_seq + len(events) - 1
-            self._log('success', f"Fetched {len(events)} new events (seq {start_seq} -> {new_last_synced_seq})")
-            # Note: sync_point.json is NOT updated here - use sync_time() to update it
+            # Find max ring_time for logging
+            max_ring_time = max(
+                int.from_bytes(e[2:6], 'little') for e in events if len(e) >= 6
+            )
+            self._log('success', f"Fetched {len(events)} new events (ring_time {start_timestamp} -> {max_ring_time})")
         else:
-            self._log('warn', "No events fetched")
+            self._log('info', "No new events (already up to date)")
 
         return events
+
+    def _update_sync_point_ring_time(self, ring_time: int, filename: Optional[str] = None):
+        """Update sync_point.json with new last_synced_ring_time."""
+        filepath = self.data_dir / (filename or SYNC_POINT_FILE)
+
+        # Load existing or create new
+        sync_point = {}
+        if filepath.exists():
+            try:
+                with open(filepath) as f:
+                    sync_point = json.load(f)
+            except Exception:
+                pass
+
+        # Update with new ring_time
+        sync_point['last_synced_ring_time'] = ring_time
+
+        # Write back
+        with open(filepath, 'w') as f:
+            json.dump(sync_point, f, indent=2)
+
+        self._log('info', f"Updated last_synced_ring_time: {ring_time}")
+
+    def _find_max_timestamp_in_file(self, filepath: Path) -> int:
+        """Scan events file to find maximum ring_time timestamp."""
+        max_ts = 0
+        try:
+            with open(filepath) as f:
+                for line in f:
+                    if line.startswith('#') or not line.strip():
+                        continue
+                    parts = line.strip().split('|')
+                    if len(parts) >= 4:
+                        hex_data = parts[3]
+                        if len(hex_data) >= 12:
+                            ts = int.from_bytes(bytes.fromhex(hex_data[4:12]), 'little')
+                            if ts > max_ts:
+                                max_ts = ts
+        except Exception:
+            pass
+        return max_ts
 
     # ========================================================================
     # Auth Key Management
@@ -981,11 +1024,15 @@ class OuraClient:
             'description': description or 'Time sync captured via oura.ble'
         }
 
-        # Preserve or update last_synced_seq
+        # Preserve or update last_synced_seq (legacy)
         if last_synced_seq is not None:
             sync_point['last_synced_seq'] = last_synced_seq
         elif 'last_synced_seq' in existing:
             sync_point['last_synced_seq'] = existing['last_synced_seq']
+
+        # Preserve last_synced_ring_time (new timestamp-based approach)
+        if 'last_synced_ring_time' in existing:
+            sync_point['last_synced_ring_time'] = existing['last_synced_ring_time']
 
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
@@ -993,8 +1040,8 @@ class OuraClient:
             json.dump(sync_point, f, indent=2)
 
         self._log('success', f"Saved sync point to {filepath}")
-        if 'last_synced_seq' in sync_point:
-            self._log('info', f"  last_synced_seq: {sync_point['last_synced_seq']}")
+        if 'last_synced_ring_time' in sync_point:
+            self._log('info', f"  last_synced_ring_time: {sync_point['last_synced_ring_time']}")
         return True
 
     # ========================================================================

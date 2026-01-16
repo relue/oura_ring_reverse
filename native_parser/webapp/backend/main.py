@@ -779,6 +779,10 @@ class SleepStagesDashboard(BaseModel):
     score: SleepScoreResponse
     bedtime_start: str
     bedtime_end: str
+    average_heart_rate: float
+    average_breath_rate: float
+    average_hrv: float
+    hr_samples: List[Dict[str, Any]]
 
 
 @app.get("/dashboard/available-nights")
@@ -788,6 +792,8 @@ async def get_available_nights():
     rd = reader.raw
 
     nights = []
+    seen_nights = set()  # Deduplicate by (date, start, end)
+
     if rd.HasField('bedtime_period'):
         bp = rd.bedtime_period
         for i in range(len(bp.bedtime_start)):
@@ -795,6 +801,13 @@ async def get_available_nights():
             end_ms = bp.bedtime_end[i]
             start_dt = datetime.fromtimestamp(start_ms / 1000)
             end_dt = datetime.fromtimestamp(end_ms / 1000)
+
+            # Deduplicate by date and time range
+            night_key = (start_dt.strftime("%Y-%m-%d"), start_dt.strftime("%H:%M"), end_dt.strftime("%H:%M"))
+            if night_key in seen_nights:
+                continue
+            seen_nights.add(night_key)
+
             duration_h = (end_ms - start_ms) / 1000 / 3600
             nights.append({
                 "index": i,
@@ -995,6 +1008,25 @@ async def get_sleep_stages_dashboard(
     )
     print(f"[sleep-stages] Score: {sleep_score.score}")
 
+    # Get biometrics from reader
+    reader_hrv = reader.hrv
+    avg_hrv = reader_hrv.average_rmssd if reader_hrv.sample_count > 0 else 0.0
+
+    # Build HR samples for trend chart (5-min intervals)
+    hr_samples = []
+    hr_timestamps = reader_hrv.timestamps if hasattr(reader_hrv, 'timestamps') else []
+    hr_values = reader_hrv.average_hr_5min if hasattr(reader_hrv, 'average_hr_5min') else []
+    for i in range(min(len(hr_timestamps), len(hr_values))):
+        ts_ms = hr_timestamps[i]
+        hr = hr_values[i]
+        if hr > 0:
+            try:
+                dt = datetime.fromtimestamp(ts_ms / 1000)
+                time_str = dt.strftime("%H:%M")
+            except:
+                time_str = f"T{i}"
+            hr_samples.append({"time": time_str, "hr": hr})
+
     return SleepStagesDashboard(
         night_index=night,
         night_date=night_date_str,
@@ -1005,6 +1037,10 @@ async def get_sleep_stages_dashboard(
         score=score_response,
         bedtime_start=bedtime_start_str,
         bedtime_end=bedtime_end_str,
+        average_heart_rate=round(sleep_analyzer.average_heart_rate, 1),
+        average_breath_rate=round(sleep_analyzer.average_breath_rate, 1),
+        average_hrv=round(avg_hrv, 1),
+        hr_samples=hr_samples,
     )
 
 

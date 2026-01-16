@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
+  ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, ComposedChart
 } from 'recharts'
 import './index.css'
 
@@ -456,9 +456,12 @@ function SleepStagesDashboard() {
   // Hypnogram: Deep at top (3), Awake at bottom (0)
   // Backend stage: 0=Deep, 1=Light, 2=REM, 3=Awake
   // Invert: Deep(0)->3, Light(1)->2, REM(2)->1, Awake(3)->0
+  // Merge HR samples by time for overlay
+  const hrByTime = new Map((data?.hr_samples || []).map((s: any) => [s.time, s.hr]))
   const hypnogramData = data?.epochs?.map((epoch: any) => ({
     ...epoch,
     stageY: 3 - epoch.stage,
+    hr: hrByTime.get(epoch.time) || null,
   })) || []
 
   const durations = data?.durations || {}
@@ -539,14 +542,15 @@ function SleepStagesDashboard() {
           <ScoreContributor label="REM" value={sleepScore.rem_sleep} />
           <ScoreContributor label="Latency" value={sleepScore.latency} />
           <ScoreContributor label="Timing" value={sleepScore.timing} />
+          <ScoreContributor label="Restfulness" value={sleepScore.restfulness} />
         </div>
       </div>
 
       {/* Hypnogram */}
-      <Panel color={COLORS.purple} title="Hypnogram" subtitle="Sleep architecture" className="mb-8">
+      <Panel color={COLORS.purple} title="Hypnogram" subtitle="Sleep stages + Heart Rate" className="mb-8">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={hypnogramData}>
+            <ComposedChart data={hypnogramData}>
               <defs>
                 <linearGradient id="sleepGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={COLORS.purple} stopOpacity={0.5} />
@@ -561,6 +565,7 @@ function SleepStagesDashboard() {
                 tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }}
               />
               <YAxis
+                yAxisId="stage"
                 stroke="#4b5563"
                 domain={[0, 3]}
                 ticks={[0, 1, 2, 3]}
@@ -568,13 +573,26 @@ function SleepStagesDashboard() {
                 tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }}
                 width={55}
               />
+              <YAxis
+                yAxisId="hr"
+                orientation="right"
+                stroke={COLORS.red}
+                domain={[40, 100]}
+                tick={{ fontSize: 10, fontFamily: 'monospace', fill: COLORS.red }}
+                tickFormatter={(v) => `${v}`}
+                width={35}
+              />
               <Tooltip
                 {...tooltipStyle(COLORS.purple)}
-                formatter={(_: any, __: string, props: any) => [props.payload?.stage_name || 'Unknown', 'Stage']}
+                formatter={(value: any, name: any) => {
+                  if (name === 'hr') return value ? [`${value} bpm`, 'Heart Rate'] : ['--', 'Heart Rate']
+                  return [value, 'Stage']
+                }}
                 labelFormatter={(label) => `Time: ${label}`}
               />
-              <Area type="stepAfter" dataKey="stageY" stroke={COLORS.purple} fill="url(#sleepGradient)" strokeWidth={2} />
-            </AreaChart>
+              <Area yAxisId="stage" type="stepAfter" dataKey="stageY" stroke={COLORS.purple} fill="url(#sleepGradient)" strokeWidth={2} />
+              <Line yAxisId="hr" type="monotone" dataKey="hr" stroke={COLORS.red} strokeWidth={1.5} dot={false} connectNulls />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </Panel>
@@ -585,6 +603,13 @@ function SleepStagesDashboard() {
         <StageCard name="REM" minutes={durations.rem_minutes || 0} totalTime={totalTime} color={COLORS.purple} />
         <StageCard name="LIGHT" minutes={durations.light_minutes || 0} totalTime={totalTime} color={COLORS.blue} />
         <StageCard name="AWAKE" minutes={durations.awake_minutes || 0} totalTime={totalTime} color={COLORS.red} />
+      </div>
+
+      {/* Biometrics */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <StatCard title="Avg Heart Rate" value={data?.average_heart_rate || 0} unit="bpm" color={COLORS.red} />
+        <StatCard title="Avg Breath Rate" value={data?.average_breath_rate || 0} unit="br/m" color={COLORS.cyan} />
+        <StatCard title="Avg HRV" value={data?.average_hrv || 0} unit="ms" color={COLORS.green} />
       </div>
 
       {/* Summary Stats */}
@@ -1427,7 +1452,7 @@ function RingControlPage() {
       )}
 
       {/* Update Ring - Main action */}
-      <Panel color={COLORS.green} title="Update Ring" subtitle="Incremental sync + parse" className="mb-8">
+      <Panel color={COLORS.green} title="Update Ring" subtitle="Timestamp-based sync + parse" className="mb-8">
         <div className="flex items-center gap-4 flex-wrap">
           <ActionButton
             label="⟳ Update Ring"
@@ -1436,7 +1461,7 @@ function RingControlPage() {
             color={COLORS.green}
           />
           <span className="text-xs text-gray-500 font-mono">
-            Fetches new events since last sync, then parses to protobuf
+            Fetches new events (by ring_time), parses with reverse date order
           </span>
           {progress && (
             <div className="flex-1 min-w-48">
@@ -1448,16 +1473,16 @@ function RingControlPage() {
       </Panel>
 
       {/* Parse Events - Convert raw events to protobuf */}
-      <Panel color={COLORS.yellow} title="Parse Events" subtitle="Convert raw events to protobuf via native parser" className="mb-8">
+      <Panel color={COLORS.orange} title="Parse Events" subtitle="Reverse-sort + native parser" className="mb-8">
         <div className="flex items-center gap-4">
           <ActionButton
             label="Parse Events"
             onClick={() => send('parse', {})}
             disabled={status.is_busy}
-            color={COLORS.yellow}
+            color={COLORS.orange}
           />
           <span className="text-xs text-gray-500 font-mono">
-            ring_events.txt → ring_data.pb (via QEMU + libringeventparser.so)
+            Dedup + reverse date order → native parser (detects all nights)
           </span>
         </div>
       </Panel>

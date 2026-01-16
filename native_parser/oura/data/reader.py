@@ -46,7 +46,7 @@ class RingDataReader:
         print(reader.summary())
     """
 
-    def __init__(self, pb_path: str, sync_point: Optional[Union[SyncPoint, str, Path]] = None, dedup: bool = True):
+    def __init__(self, pb_path: str, sync_point: Optional[Union[SyncPoint, str, Path]] = None, dedup: bool = False):
         """Load and parse protobuf file.
 
         Args:
@@ -56,13 +56,13 @@ class RingDataReader:
                        - 'auto': Auto-detect sync_point.json
                        - SyncPoint instance: Use directly
                        - str/Path: Load from file
-            dedup: If True, deduplicate and sort protobuf data (handles raw batch duplicates)
+            dedup: If True, deduplicate and sort protobuf data (NOT needed with incremental sync)
         """
         self._path = Path(pb_path)
         self._rd = proto.RingData()
         self._rd.ParseFromString(self._path.read_bytes())
 
-        # Dedup and sort protobuf data (handles duplicate batches in raw event files)
+        # Dedup and sort protobuf data (NOT needed with incremental sync)
         if dedup:
             self._dedup_protobuf()
 

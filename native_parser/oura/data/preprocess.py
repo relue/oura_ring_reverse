@@ -1,7 +1,8 @@
 """
 Preprocess ring events file before parsing to protobuf.
 
-Deduplicates events while preserving recording order.
+Sorts events by REVERSE date order (newest first).
+This makes the native parser detect all sleep nights correctly.
 Writes to transformed_ring_events.txt, keeping original intact.
 """
 
@@ -9,25 +10,27 @@ from pathlib import Path
 from typing import Tuple
 
 
-def preprocess_events(input_path: str, output_path: str = None) -> Tuple[int, int, int]:
-    """Deduplicate events file (preserves recording order).
+def preprocess_events(input_path: str, output_path: str = None, reverse_order: bool = False) -> Tuple[int, int, int]:
+    """Sort events by timestamp for native parser.
+
+    Events should be in chronological order (oldest first) for SleepNet ML model.
+    Reverse order was previously used to workaround RING_START_IND session clearing,
+    but this breaks SleepNet preprocessing which expects chronological data.
 
     Args:
         input_path: Path to raw ring_events.txt
         output_path: Path for cleaned output (default: transformed_ring_events.txt)
+        reverse_order: If True, sort events by timestamp DESC (deprecated)
 
     Returns:
-        Tuple of (total_events, unique_events, duplicates_removed)
+        Tuple of (total_events, output_events, 0)
     """
     if output_path is None:
-        # Write to intermediate file, preserve original
         input_p = Path(input_path)
         output_path = str(input_p.parent / "transformed_ring_events.txt")
 
-    events = []  # (timestamp, tag_byte, line)
-    seen = set()
+    events = []  # (timestamp, line)
     total = 0
-    duplicates = 0
 
     with open(input_path) as f:
         for line in f:
@@ -39,9 +42,7 @@ def preprocess_events(input_path: str, output_path: str = None) -> Tuple[int, in
             if len(parts) < 4:
                 continue
 
-            tag = parts[1]
             hex_data = parts[3]
-
             if len(hex_data) < 12:
                 continue
 
@@ -50,36 +51,26 @@ def preprocess_events(input_path: str, output_path: str = None) -> Tuple[int, in
             # Extract timestamp (bytes 2-5, little-endian)
             try:
                 ts = int.from_bytes(bytes.fromhex(hex_data[4:12]), 'little')
-                tag_byte = int(tag, 16)
             except ValueError:
                 continue
 
-            # Dedup key
-            key = (tag_byte, ts)
-            if key in seen:
-                duplicates += 1
-                continue
-            seen.add(key)
-
             events.append((ts, line))
 
-    # NOTE: Don't sort - native parser expects events in recording order
-    # events.sort(key=lambda x: x[0])
+    # Sort by timestamp - chronological order (oldest first) for SleepNet ML
+    events.sort(key=lambda x: x[0], reverse=reverse_order)
 
     # Write output
-    unique = len(events)
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    order_str = "reverse date order (newest first)" if reverse_order else "chronological order (oldest first)"
 
     with open(output_path, 'w') as f:
-        f.write('# Oura Ring Events (deduplicated, recording order preserved)\n')
-        f.write(f'# Total: {total}, Unique: {unique}, Duplicates removed: {duplicates}\n')
-        f.write('#\n')
-        f.write('# Format: index|tag_hex|event_name|hex_data\n')
+        f.write(f'# Oura Ring Events ({order_str})\n')
+        f.write(f'# Events: {len(events)}\n')
         f.write('#\n')
         for _, line in events:
             f.write(line + '\n')
 
-    return total, unique, duplicates
+    return total, len(events), 0
 
 
 def main():

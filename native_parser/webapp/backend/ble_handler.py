@@ -250,10 +250,13 @@ class BLEConnectionManager:
         await self.send_status()
 
         try:
-            # Sync time first
-            await self.send_log("info", "Capturing time sync point...")
-            await self.client.sync_time()
-            await asyncio.sleep(1)
+            # Use existing sync point if available, otherwise sync time
+            if not self.client.load_sync_point():
+                await self.send_log("info", "No sync point, capturing time sync...")
+                await self.client.sync_time()
+                await asyncio.sleep(1)
+            else:
+                await self.send_log("info", "Using existing sync point")
 
             # Build filter
             event_filter = None

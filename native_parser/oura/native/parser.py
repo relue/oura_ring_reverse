@@ -88,7 +88,7 @@ def parse_events_sync(
     input_path: Optional[Path] = None,
     output_path: Optional[Path] = None,
     log_callback: Optional[Callable[[str, str], None]] = None,
-    preprocess: bool = False  # Disabled: deduplication breaks 2-night detection
+    preprocess: bool = True  # Enabled: chronological order required for SleepNet ML
 ) -> ParseResult:
     """Parse events file to protobuf synchronously.
 
@@ -96,7 +96,8 @@ def parse_events_sync(
         input_path: Path to ring_events.txt (default: input_data/ring_events.txt)
         output_path: Path for output protobuf (default: input_data/ring_data.pb)
         log_callback: Optional callback for log messages (level, message)
-        preprocess: If True (default), deduplicate and sort events before parsing
+        preprocess: If True (default), sort events chronologically before parsing.
+                    Chronological order (oldest first) required for SleepNet ML model.
 
     Returns:
         ParseResult with status and details
@@ -136,14 +137,15 @@ def parse_events_sync(
             error=f"Input file not found: {input_path}"
         )
 
-    # Preprocess: deduplicate (preserves recording order)
+    # Preprocess: sort by timestamp (oldest dates first)
+    # Chronological order required for SleepNet ML model
     # Write to intermediate file, keep original intact
     transformed_path = input_path.parent / "transformed_ring_events.txt"
     if preprocess:
         from oura.data.preprocess import preprocess_events
-        log("info", "Preprocessing: deduplicating events...")
-        total, unique, dups = preprocess_events(str(input_path), str(transformed_path))
-        log("info", f"Preprocessed: {total} -> {unique} events ({dups} duplicates removed)")
+        log("info", "Preprocessing: chronological order...")
+        total, output, _ = preprocess_events(str(input_path), str(transformed_path), reverse_order=False)
+        log("info", f"Sorted {output} events (oldest first)")
         parser_input = transformed_path
     else:
         parser_input = input_path
