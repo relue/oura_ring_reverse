@@ -1317,9 +1317,31 @@ function RingControlPage() {
     setConfirmDialog(null)
   }
 
+  // Check if BLE is available (not in Docker mode)
+  const bleUnavailable = adapters.length === 0 || (adapters.length === 1 && selectedAdapter === 'none')
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       <PageHeader title="RING::CONTROL" accentColor={COLORS.cyan} />
+
+      {/* Docker Mode Warning */}
+      {bleUnavailable && (
+        <div className="mb-6 p-4 rounded-xl border" style={{
+          backgroundColor: 'rgba(249, 115, 22, 0.1)',
+          borderColor: 'rgba(249, 115, 22, 0.3)'
+        }}>
+          <h3 className="text-orange-400 font-mono font-bold mb-2">DOCKER MODE - BLE UNAVAILABLE</h3>
+          <p className="text-gray-400 text-sm mb-3">
+            Bluetooth is not available in Docker. To sync data from your ring, run on the host:
+          </p>
+          <code className="block bg-black/50 p-3 rounded font-mono text-xs text-cyan-400 mb-3">
+            uv run oura-ble --get-data-incremental
+          </code>
+          <p className="text-gray-500 text-xs">
+            Data syncs to input_data/ which Docker reads automatically. Refresh this page after syncing.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Status Panel */}

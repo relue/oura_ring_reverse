@@ -18,6 +18,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import httpx
+
+# Docker Parser API URL (parser + ML run in Docker with QEMU)
+PARSER_API_URL = "http://localhost:8001"
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -842,7 +846,7 @@ async def get_available_nights():
 
 
 async def check_and_parse_if_stale() -> bool:
-    """Check if protobuf is stale and reparse if needed.
+    """Check if protobuf is stale and reparse if needed via Docker API.
 
     Returns True if data was reparsed, False otherwise.
     """
@@ -864,25 +868,23 @@ async def check_and_parse_if_stale() -> bool:
         needs_parse = events_mtime > pb_mtime
 
     if needs_parse:
-        print("[auto-parse] Protobuf is stale, running parser...")
+        print("[auto-parse] Protobuf is stale, calling Docker parser API...")
         try:
-            from oura.native.parser import parse_events_sync, check_parser_available
-
-            available, msg = check_parser_available()
-            if not available:
-                print(f"[auto-parse] Parser not available: {msg}")
-                return False
-
-            result = parse_events_sync()
-            if result.success:
-                print(f"[auto-parse] Parsed {result.input_events} events -> {result.output_size} bytes")
-                # Clear cached reader/analyzer
-                _analyzer = None
-                _reader = None
-                return True
-            else:
-                print(f"[auto-parse] Parse failed: {result.error}")
-                return False
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(f"{PARSER_API_URL}/parse")
+                if response.status_code == 200:
+                    result = response.json()
+                    print(f"[auto-parse] Parsed {result['input_events']} events -> {result['output_size']} bytes")
+                    # Clear cached reader/analyzer
+                    _analyzer = None
+                    _reader = None
+                    return True
+                else:
+                    print(f"[auto-parse] Parse failed: {response.text}")
+                    return False
+        except httpx.ConnectError:
+            print("[auto-parse] Docker parser API not available. Start with: docker compose up -d")
+            return False
         except Exception as e:
             print(f"[auto-parse] Error: {e}")
             return False
@@ -896,73 +898,111 @@ async def get_sleep_stages_dashboard(
 ):
     """Get detailed sleep stages data with timestamps for hypnogram.
 
-    Uses the high-level SleepAnalyzer which automatically uses SleepNet ML
-    for proper REM classification when available.
-    Timestamps come from ring_events.txt via time sync for real UTC times.
-    Auto-parses if protobuf is stale.
+    Calls Docker API for ML-based sleep stage classification (SleepNet).
+    Falls back to local analysis if Docker is not available.
     """
     # Auto-parse if data is stale
     await check_and_parse_if_stale()
 
+    # Try Docker API for ML sleep stages
+    ml_response = None
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(f"{PARSER_API_URL}/ml/sleep-stages?night={night}")
+            if response.status_code == 200:
+                ml_response = response.json()
+                print(f"[sleep-stages] Got ML stages from Docker: {len(ml_response.get('epochs', []))} epochs")
+    except httpx.ConnectError:
+        print("[sleep-stages] Docker API not available, using local analyzer")
+    except Exception as e:
+        print(f"[sleep-stages] Docker API error: {e}")
+
     reader = get_reader()  # Reader with real UTC timestamps
-    sleep_analyzer = SleepAnalyzer(reader, night_index=night)  # ML with night selection
+
+    # Always create local sleep_analyzer for biometrics (even when using Docker ML)
+    local_sleep_analyzer = SleepAnalyzer(reader, night_index=night)
 
     # Display stage mapping: 0=Deep, 1=Light, 2=REM, 3=Awake (for hypnogram Y-axis)
-    # SleepAnalyzer returns: 0=Awake, 1=Light, 2=Deep, 3=REM
     stage_names = {0: "Deep", 1: "Light", 2: "REM", 3: "Awake"}
     stage_colors = {0: "#6366f1", 1: "#3b82f6", 2: "#a855f7", 3: "#ef4444"}
+    # Docker API returns: 0=Awake, 1=Light, 2=Deep, 3=REM (standard)
     standard_to_display = {0: 3, 1: 1, 2: 0, 3: 2}  # awake→3, light→1, deep→0, rem→2
 
-    print(f"[sleep-stages] Using ML: {sleep_analyzer.uses_ml}")
-
-    # Get stages AND timestamps from SleepAnalyzer (both from ML model)
-    # This ensures stages and timestamps are aligned (same source)
-    stages = sleep_analyzer.stages
-    ml_timestamps = sleep_analyzer.timestamps  # Unix seconds from SleepNet
-
-    # Convert ML timestamps (seconds) to milliseconds for API
-    sleep_timestamps = [int(ts * 1000) for ts in ml_timestamps]
-    epochs = []
-
-    n_epochs = len(stages)
-    print(f"[sleep-stages] ML epochs: {n_epochs}, timestamps: {len(sleep_timestamps)}")
-
-    # Calculate time increment for interpolating missing timestamps
-    if sleep_timestamps and len(sleep_timestamps) >= 2:
-        epoch_duration_ms = 30 * 1000  # 30 seconds per epoch
-        first_ts = sleep_timestamps[0]
+    # Use ML response from Docker if available
+    if ml_response and ml_response.get('uses_ml'):
+        print(f"[sleep-stages] Using ML from Docker")
+        docker_epochs = ml_response.get('epochs', [])
+        # Transform Docker epochs to display format
+        epochs = []
+        ml_timestamps = []
+        stages = []
+        for e in docker_epochs:
+            stage = e['stage']  # Already in standard format (0=Awake, 1=Light, 2=Deep, 3=REM)
+            ts_ms = e['timestamp']
+            ml_timestamps.append(ts_ms / 1000)  # Convert to seconds
+            stages.append(stage)
+            display_stage = standard_to_display.get(stage, stage)
+            epochs.append({
+                "index": e['index'],
+                "timestamp": ts_ms,
+                "stage": display_stage,
+                "stage_name": stage_names.get(display_stage, "Unknown"),
+                "time": e['time'],
+                "color": stage_colors.get(display_stage, "#gray"),
+            })
+        sleep_timestamps = [int(ts * 1000) for ts in ml_timestamps]
+        n_epochs = len(epochs)
+        uses_ml = True
     else:
-        epoch_duration_ms = 30 * 1000
-        first_ts = 0
+        # Fall back to local SleepAnalyzer (without ML)
+        print(f"[sleep-stages] Using local analyzer (no ML)")
+        stages = local_sleep_analyzer.stages
+        ml_timestamps = local_sleep_analyzer.timestamps
+        sleep_timestamps = [int(ts * 1000) for ts in ml_timestamps]
+        epochs = []
+        n_epochs = len(stages)
+        uses_ml = local_sleep_analyzer.uses_ml
 
-    for i in range(n_epochs):
-        stage = stages[i] if i < len(stages) else 0
+    print(f"[sleep-stages] Epochs: {n_epochs}, timestamps: {len(sleep_timestamps)}")
 
-        # Use real UTC timestamp from events file (in milliseconds)
-        if i < len(sleep_timestamps):
-            ts_ms = sleep_timestamps[i]
+    # Build epochs if not already built from Docker response
+    if not epochs:
+        # Calculate time increment for interpolating missing timestamps
+        if sleep_timestamps and len(sleep_timestamps) >= 2:
+            epoch_duration_ms = 30 * 1000  # 30 seconds per epoch
+            first_ts = sleep_timestamps[0]
         else:
-            # Interpolate for any missing timestamps
-            ts_ms = first_ts + (i * epoch_duration_ms)
+            epoch_duration_ms = 30 * 1000
+            first_ts = 0
 
-        ts_sec = ts_ms / 1000
+        for i in range(n_epochs):
+            stage = stages[i] if i < len(stages) else 0
 
-        # Convert Unix timestamp to readable time
-        try:
-            dt = datetime.fromtimestamp(ts_sec)
-            time_str = dt.strftime("%H:%M")
-        except:
-            time_str = f"Epoch {i}"
+            # Use real UTC timestamp from events file (in milliseconds)
+            if i < len(sleep_timestamps):
+                ts_ms = sleep_timestamps[i]
+            else:
+                # Interpolate for any missing timestamps
+                ts_ms = first_ts + (i * epoch_duration_ms)
 
-        display_stage = standard_to_display.get(int(stage), int(stage))
-        epochs.append({
-            "index": i,
-            "timestamp": int(ts_ms),  # Already in milliseconds
-            "stage": display_stage,
-            "stage_name": stage_names.get(display_stage, "Unknown"),
-            "time": time_str,
-            "color": stage_colors.get(display_stage, "#gray"),
-        })
+            ts_sec = ts_ms / 1000
+
+            # Convert Unix timestamp to readable time
+            try:
+                dt = datetime.fromtimestamp(ts_sec)
+                time_str = dt.strftime("%H:%M")
+            except:
+                time_str = f"Epoch {i}"
+
+            display_stage = standard_to_display.get(int(stage), int(stage))
+            epochs.append({
+                "index": i,
+                "timestamp": int(ts_ms),  # Already in milliseconds
+                "stage": display_stage,
+                "stage_name": stage_names.get(display_stage, "Unknown"),
+                "time": time_str,
+                "color": stage_colors.get(display_stage, "#gray"),
+            })
 
     # Get bedtime window from ML timestamps (aligned with stages)
     bedtime_start_str = ""
@@ -977,17 +1017,38 @@ async def get_sleep_stages_dashboard(
         duration_hours = (ml_timestamps[-1] - ml_timestamps[0]) / 3600
         print(f"[sleep-stages] Night {night}: {night_date_str} {bedtime_start_str} - {bedtime_end_str} ({duration_hours:.1f}h)")
 
-    # Get stage durations from analyzer (automatically uses ML)
-    stage_durations = sleep_analyzer.stage_durations
-    durations = {
-        "deep_minutes": round(stage_durations.deep, 1),
-        "light_minutes": round(stage_durations.light, 1),
-        "rem_minutes": round(stage_durations.rem, 1),
-        "awake_minutes": round(stage_durations.awake, 1),
-        "total_sleep_minutes": round(stage_durations.total_sleep, 1),
-        "total_time_minutes": round(stage_durations.total_time, 1),
-        "efficiency_percent": round(stage_durations.efficiency, 1),
-    }
+    # Get stage durations
+    if ml_response and ml_response.get('uses_ml'):
+        # Use durations from Docker response
+        docker_durations = ml_response.get('durations', {})
+        deep_min = docker_durations.get('deep', 0)
+        light_min = docker_durations.get('light', 0)
+        rem_min = docker_durations.get('rem', 0)
+        awake_min = docker_durations.get('awake', 0)
+        total_sleep = deep_min + light_min + rem_min
+        total_time = total_sleep + awake_min
+        efficiency = (total_sleep / total_time * 100) if total_time > 0 else 0
+        durations = {
+            "deep_minutes": round(deep_min, 1),
+            "light_minutes": round(light_min, 1),
+            "rem_minutes": round(rem_min, 1),
+            "awake_minutes": round(awake_min, 1),
+            "total_sleep_minutes": round(total_sleep, 1),
+            "total_time_minutes": round(total_time, 1),
+            "efficiency_percent": round(efficiency, 1),
+        }
+    else:
+        # Use local analyzer
+        stage_durations = local_sleep_analyzer.stage_durations
+        durations = {
+            "deep_minutes": round(stage_durations.deep, 1),
+            "light_minutes": round(stage_durations.light, 1),
+            "rem_minutes": round(stage_durations.rem, 1),
+            "awake_minutes": round(stage_durations.awake, 1),
+            "total_sleep_minutes": round(stage_durations.total_sleep, 1),
+            "total_time_minutes": round(stage_durations.total_time, 1),
+            "efficiency_percent": round(stage_durations.efficiency, 1),
+        }
 
     print(f"[sleep-stages] Deep={durations['deep_minutes']}m, "
           f"Light={durations['light_minutes']}m, REM={durations['rem_minutes']}m, "
@@ -1015,19 +1076,35 @@ async def get_sleep_stages_dashboard(
                 current_start = epoch["time"]
                 current_start_idx = i
 
-    # Get sleep score from analyzer
-    sleep_score = sleep_analyzer.score
-    score_response = SleepScoreResponse(
-        score=sleep_score.score,
-        total_sleep=sleep_score.total_sleep,
-        efficiency=sleep_score.efficiency,
-        restfulness=sleep_score.restfulness,
-        rem_sleep=sleep_score.rem_sleep,
-        deep_sleep=sleep_score.deep_sleep,
-        latency=sleep_score.latency,
-        timing=sleep_score.timing,
-    )
-    print(f"[sleep-stages] Score: {sleep_score.score}")
+    # Get sleep score
+    if ml_response and ml_response.get('uses_ml') and ml_response.get('score'):
+        # Use score from Docker response
+        docker_score = ml_response['score']
+        score_response = SleepScoreResponse(
+            score=docker_score.get('score', 0),
+            total_sleep=docker_score.get('total_sleep', 0),
+            efficiency=docker_score.get('efficiency', 0),
+            restfulness=docker_score.get('restfulness', 0),
+            rem_sleep=docker_score.get('rem_sleep', 0),
+            deep_sleep=docker_score.get('deep_sleep', 0),
+            latency=docker_score.get('latency', 0),
+            timing=docker_score.get('timing', 0),
+        )
+        print(f"[sleep-stages] Score (from Docker): {docker_score.get('score', 0)}")
+    else:
+        # Use local analyzer
+        sleep_score = local_sleep_analyzer.score
+        score_response = SleepScoreResponse(
+            score=sleep_score.score,
+            total_sleep=sleep_score.total_sleep,
+            efficiency=sleep_score.efficiency,
+            restfulness=sleep_score.restfulness,
+            rem_sleep=sleep_score.rem_sleep,
+            deep_sleep=sleep_score.deep_sleep,
+            latency=sleep_score.latency,
+            timing=sleep_score.timing,
+        )
+        print(f"[sleep-stages] Score: {sleep_score.score}")
 
     # Get biometrics from reader
     reader_hrv = reader.hrv
@@ -1058,8 +1135,8 @@ async def get_sleep_stages_dashboard(
         score=score_response,
         bedtime_start=bedtime_start_str,
         bedtime_end=bedtime_end_str,
-        average_heart_rate=round(sleep_analyzer.average_heart_rate, 1),
-        average_breath_rate=round(sleep_analyzer.average_breath_rate, 1),
+        average_heart_rate=round(local_sleep_analyzer.average_heart_rate, 1),
+        average_breath_rate=round(local_sleep_analyzer.average_breath_rate, 1),
         average_hrv=round(avg_hrv, 1),
         hr_samples=hr_samples,
     )

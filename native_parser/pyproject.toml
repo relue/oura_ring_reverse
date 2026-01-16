@@ -5,37 +5,27 @@ description = "Oura Ring Gen 3 reverse engineering - native parser, ML inference
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
-# Core dependencies (always needed)
+# Default dependencies (web backend + BLE)
 dependencies = [
     "protobuf>=4.0.0",
     "numpy>=1.24.0",
-]
-
-[project.optional-dependencies]
-# BLE client - run on host with Bluetooth hardware
-ble = [
-    "bleak>=0.21.0",
-    "pycryptodome>=3.15.0",
-]
-
-# Web backend
-web = [
+    # Web backend
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.22.0",
     "pydantic>=2.0.0",
     "python-multipart>=0.0.6",
     "websockets>=12.0",
     "aiofiles>=23.0.0",
+    "httpx>=0.25.0",
+    # BLE client
+    "bleak>=0.21.0",
+    "pycryptodome>=3.15.0",
 ]
 
-# ML inference (PyTorch CPU)
+[project.optional-dependencies]
+# ML inference (PyTorch CPU) - only needed if running ML locally instead of Docker
 ml = [
     "torch>=2.0.0",
-]
-
-# All dependencies (for full local development)
-all = [
-    "oura-ring-parser[ble,web,ml]",
 ]
 
 # Development tools
