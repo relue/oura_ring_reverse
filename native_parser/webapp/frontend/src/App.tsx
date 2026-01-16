@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, ComposedChart
+  Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, AreaChart, Area, Cell, ComposedChart
 } from 'recharts'
 import './index.css'
 
@@ -47,7 +47,8 @@ function useSummary() {
   })
 }
 
-function useSleepDashboard() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _useSleepDashboard() {
   return useQuery({
     queryKey: ['dashboard', 'sleep'],
     queryFn: async () => {
@@ -668,7 +669,7 @@ function HRVDashboardPage() {
                 tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }}
               />
               <YAxis stroke="#4b5563" tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }} />
-              <Tooltip {...tooltipStyle(COLORS.green)} formatter={(value: number) => [`${value} ms`, 'RMSSD']} />
+              <Tooltip {...tooltipStyle(COLORS.green)} formatter={(value) => [`${value} ms`, 'RMSSD']} />
               <Area type="monotone" dataKey="rmssd" stroke={COLORS.green} fill="url(#hrvGradient)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
@@ -683,7 +684,7 @@ function HRVDashboardPage() {
               <CartesianGrid strokeDasharray="3 3" stroke={`${COLORS.green}15`} />
               <XAxis type="number" stroke="#4b5563" tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }} />
               <YAxis type="category" dataKey="stage" stroke="#4b5563" width={55} tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }} />
-              <Tooltip {...tooltipStyle(COLORS.green)} formatter={(value: number) => [`${value.toFixed(1)} ms`, 'Avg RMSSD']} />
+              <Tooltip {...tooltipStyle(COLORS.green)} formatter={(value) => [`${Number(value).toFixed(1)} ms`, 'Avg RMSSD']} />
               <Bar dataKey="rmssd" radius={[0, 6, 6, 0]}>
                 {byStageData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -1158,8 +1159,9 @@ function TerminalOutput({ logs }: { logs: LogEntry[] }) {
   )
 }
 
-// Filter chip component
-function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+// Filter chip component (for future use)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -1259,11 +1261,11 @@ function ConfirmDialog({ action, onConfirm, onCancel }: {
 // Main Ring Control Page
 function RingControlPage() {
   const { status, logs, heartbeat, heartbeatHistory, progress, wsConnected, send, clearLogs, clearHeartbeat } = useBLEWebSocket()
-  const { data: syncInfo, refetch: refetchSyncInfo } = useSyncInfo()
+  const { data: syncInfo } = useSyncInfo()
   const [isHeartbeatActive, setIsHeartbeatActive] = useState(false)
   const [adapters, setAdapters] = useState<string[]>(['hci0'])
   const [selectedAdapter, setSelectedAdapter] = useState('hci0')
-  const [selectedFilter, setSelectedFilter] = useState('all')
+  const [selectedFilter] = useState('all')
   const [confirmDialog, setConfirmDialog] = useState<'bond' | 'factory-reset' | null>(null)
 
   // Fetch available adapters on mount
@@ -1289,7 +1291,8 @@ function RingControlPage() {
     send('update-ring')
     // Refetch sync info after update completes (via WebSocket complete event)
   }
-  const handleGetData = () => send('get-data', { filters: { preset: selectedFilter } })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleGetData = () => send('get-data', { filters: { preset: selectedFilter } })
 
   const handleHeartbeat = () => {
     if (isHeartbeatActive) {

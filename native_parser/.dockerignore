@@ -1,0 +1,31 @@
+# Data files (mount as volumes instead)
+input_data/
+*.pb
+ring_events*.txt
+sync_point*.json
+
+# Development
+__pycache__/
+*.pyc
+.git/
+.gitignore
+ghidra_project/
+_archive/
+docs/
+examples/
+tests/
+
+# Frontend dev dependencies (rebuilt in Docker)
+webapp/frontend/node_modules/
+
+# Build artifacts
+*.o
+*.so.bak
+
+# Proto source files (only need generated _pb2.py)
+*.proto
+
+# UV/Python project files
+.venv/
+uv.lock
+.python-version

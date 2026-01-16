@@ -1,0 +1,18 @@
+services:
+  oura-parser:
+    build: .
+    image: oura-parser:latest
+    container_name: oura-parser
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount data directory (ring_events.txt, ring_data.pb, sync_point.json)
+      - ./input_data:/app/input_data
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

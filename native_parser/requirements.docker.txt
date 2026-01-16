@@ -1,11 +1,11 @@
 # Oura Ring Parser - Docker Dependencies
-# CPU-only PyTorch to minimize image size
+# CPU-only PyTorch for smaller image size (~700MB vs 3GB with GPU)
 
 # Core
 protobuf>=4.0.0
 numpy>=1.24.0
 
-# ML - PyTorch CPU only (smaller image)
+# ML - PyTorch CPU only
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
 
@@ -15,9 +15,7 @@ uvicorn[standard]>=0.22.0
 pydantic>=2.0.0
 python-multipart>=0.0.6
 websockets>=12.0
-
-# BLE (optional - for direct ring communication)
-# bleak>=0.21.0  # Uncomment if running BLE inside container
-
-# Utilities
 aiofiles>=23.0.0
+
+# Note: BLE dependencies (bleak, pycryptodome) are NOT included
+# BLE requires real Bluetooth hardware - run on host with `uv sync --extra ble`

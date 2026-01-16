@@ -15,6 +15,8 @@ from typing import Optional, List, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # Add parent directory to path for imports
@@ -26,9 +28,16 @@ from oura.data.reader import RingDataReader
 from oura.analysis.hrv import HRVAnalyzer
 from oura.analysis.sleep import SleepAnalyzer
 
-# BLE handler for WebSocket communication
-from ble_handler import get_ble_manager, BLEConnectionManager
-from oura.ble.bonding import list_bluetooth_adapters
+# BLE handler for WebSocket communication (optional - requires bleak)
+try:
+    from webapp.backend.ble_handler import get_ble_manager, BLEConnectionManager
+    from oura.ble.bonding import list_bluetooth_adapters
+    BLE_AVAILABLE = True
+except ImportError:
+    BLE_AVAILABLE = False
+    get_ble_manager = None
+    BLEConnectionManager = None
+    list_bluetooth_adapters = None
 
 app = FastAPI(
     title="Oura Ring Data API",
@@ -44,6 +53,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker."""
+    return {"status": "healthy", "ble_available": BLE_AVAILABLE}
+
 
 # Global analyzer (loaded once) - provides high-level API
 INPUT_DIR = Path(__file__).parent.parent.parent / "input_data"
@@ -204,7 +220,12 @@ class SpO2Data(BaseModel):
 
 @app.get("/")
 async def root():
-    """API root endpoint."""
+    """Serve frontend or API info."""
+    # Serve React frontend if available
+    frontend_index = Path(__file__).parent.parent / "frontend" / "dist" / "index.html"
+    if frontend_index.exists():
+        return FileResponse(frontend_index)
+    # Fallback to API info
     return {
         "name": "Oura Ring Data API",
         "version": "1.0.0",
@@ -1054,6 +1075,10 @@ async def ble_websocket(websocket: WebSocket):
     Accepts commands: connect, disconnect, auth, sync-time, get-data, heartbeat, bond, factory-reset
     """
     await websocket.accept()
+    if not BLE_AVAILABLE:
+        await websocket.send_json({"type": "error", "message": "BLE not available in Docker. Run BLE client on host."})
+        await websocket.close()
+        return
     ble_manager = get_ble_manager()
     ble_manager.websockets.append(websocket)
 
@@ -1125,6 +1150,8 @@ class BLEStatus(BaseModel):
 @app.get("/ble/status", response_model=BLEStatus)
 async def get_ble_status():
     """Get current BLE connection status."""
+    if not BLE_AVAILABLE:
+        return BLEStatus(connected=False, authenticated=False, is_busy=False, current_action="BLE not available", adapter="none")
     ble_manager = get_ble_manager()
     return BLEStatus(
         connected=ble_manager.client.is_connected if ble_manager.client else False,
@@ -1143,6 +1170,8 @@ class AdapterList(BaseModel):
 @app.get("/ble/adapters", response_model=AdapterList)
 async def get_ble_adapters():
     """List available Bluetooth adapters."""
+    if not BLE_AVAILABLE:
+        return AdapterList(adapters=[], default="none")
     adapters = list_bluetooth_adapters()
     return AdapterList(
         adapters=adapters if adapters else ["hci0"],
@@ -1224,6 +1253,22 @@ async def get_sync_info():
         protobuf_exists=protobuf_exists,
         needs_parse=needs_parse,
     )
+
+
+# Serve React frontend (must be last to not override API routes)
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIR.exists():
+    # Serve static assets
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+
+    # Serve index.html for all non-API routes (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        """Serve React frontend for non-API routes."""
+        file_path = FRONTEND_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIR / "index.html")
 
 
 if __name__ == "__main__":
