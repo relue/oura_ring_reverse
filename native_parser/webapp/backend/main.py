@@ -1196,6 +1196,9 @@ async def ble_websocket(websocket: WebSocket):
                 adapter = data.get("adapter")
                 await ble_manager.bond_ring_async(adapter=adapter)
 
+            elif action == "unpair":
+                await ble_manager.unpair_ring_async()
+
             elif action == "factory-reset":
                 await ble_manager.factory_reset()
 

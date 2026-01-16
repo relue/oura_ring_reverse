@@ -25,10 +25,10 @@ uv sync
 docker compose up -d --build
 
 # Build frontend
-cd native_parser/webapp/frontend && npm install && npm run build && cd ../../..
+cd native_parser/webapp/frontend && npm install && npm run build && cd ../..
 
-# Start backend
-uv run uvicorn native_parser.webapp.backend.main:app --host 0.0.0.0 --port 8000
+# Start backend (from native_parser dir)
+uv run uvicorn webapp.backend.main:app --host 0.0.0.0 --port 8000
 
 # Open http://localhost:8000
 ```

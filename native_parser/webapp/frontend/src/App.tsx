@@ -1179,17 +1179,24 @@ function _FilterChip({ label, active, onClick }: { label: string; active: boolea
 
 // Confirmation dialog component
 function ConfirmDialog({ action, onConfirm, onCancel }: {
-  action: 'bond' | 'factory-reset'
+  action: 'pair' | 'unpair' | 'factory-reset'
   onConfirm: () => void
   onCancel: () => void
 }) {
   const [confirmText, setConfirmText] = useState('')
 
   const config = {
-    'bond': {
-      title: 'Bond with Ring',
+    'pair': {
+      title: 'Pair with Ring',
       warning: 'Make sure ring is in PAIRING MODE (white light on charger, then remove).',
-      confirm: 'Start Bonding',
+      confirm: 'Start Pairing',
+      color: COLORS.orange,
+      requireType: null
+    },
+    'unpair': {
+      title: 'Unpair Ring',
+      warning: 'This will remove the Bluetooth pairing from this PC. Ring data stays intact. You will need to pair again to connect.',
+      confirm: 'Unpair',
       color: COLORS.orange,
       requireType: null
     },
@@ -1266,7 +1273,7 @@ function RingControlPage() {
   const [adapters, setAdapters] = useState<string[]>(['hci0'])
   const [selectedAdapter, setSelectedAdapter] = useState('hci0')
   const [selectedFilter] = useState('all')
-  const [confirmDialog, setConfirmDialog] = useState<'bond' | 'factory-reset' | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<'pair' | 'unpair' | 'factory-reset' | null>(null)
 
   // Fetch available adapters on mount
   useEffect(() => {
@@ -1305,12 +1312,15 @@ function RingControlPage() {
     }
   }
 
-  const handleBond = () => setConfirmDialog('bond')
+  const handlePair = () => setConfirmDialog('pair')
+  const handleUnpair = () => setConfirmDialog('unpair')
   const handleFactoryReset = () => setConfirmDialog('factory-reset')
 
   const confirmAction = () => {
-    if (confirmDialog === 'bond') {
+    if (confirmDialog === 'pair') {
       send('bond', { adapter: selectedAdapter })
+    } else if (confirmDialog === 'unpair') {
+      send('unpair')
     } else if (confirmDialog === 'factory-reset') {
       send('factory-reset')
     }
@@ -1527,12 +1537,18 @@ function RingControlPage() {
         </Panel>
       )}
 
-      {/* Dangerous Operations */}
+      {/* Advanced Operations */}
       <Panel color={COLORS.red} title="Advanced Operations" subtitle="Use with caution" className="mb-8">
         <div className="flex flex-wrap gap-3">
           <ActionButton
-            label="Bond Ring"
-            onClick={handleBond}
+            label="Pair Ring"
+            onClick={handlePair}
+            disabled={status.is_busy}
+            color={COLORS.orange}
+          />
+          <ActionButton
+            label="Unpair Ring"
+            onClick={handleUnpair}
             disabled={status.is_busy}
             color={COLORS.orange}
           />
@@ -1544,7 +1560,7 @@ function RingControlPage() {
           />
         </div>
         <p className="text-xs text-gray-500 mt-3">
-          Bond requires ring in pairing mode. Factory reset erases ALL data including auth key.
+          Pair requires ring in pairing mode. Unpair removes Bluetooth bond. Factory reset erases ALL ring data.
         </p>
       </Panel>
 

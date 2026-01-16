@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from oura.ble.client import OuraClient
-from oura.ble.bonding import bond_ring, list_bluetooth_adapters
+from oura.ble.bonding import bond_ring, remove_bond, list_bluetooth_adapters
 from oura.ble.protocol import EventFilter, FILTER_PRESETS, DEFAULT_DATA_DIR
 
 
@@ -178,9 +178,15 @@ class BLEConnectionManager:
             if key_hex:
                 try:
                     auth_key = bytes.fromhex(key_hex.replace(' ', ''))
+                    await self.send_log("info", f"Using provided auth key: {key_hex[:8]}...")
                 except ValueError:
                     await self.send_log("error", "Invalid auth key hex")
                     return False
+            else:
+                # Log which key will be used
+                key_to_use = self.client.auth_key
+                key_hex_display = key_to_use.hex() if key_to_use else "None"
+                await self.send_log("info", f"Using auth key: {key_hex_display[:16]}...")
 
             success = await self.client.authenticate(auth_key)
 
@@ -382,6 +388,42 @@ class BLEConnectionManager:
             return identity is not None
         except Exception as e:
             await self.send_log("error", f"Bond error: {e}")
+            return False
+        finally:
+            self.is_busy = False
+            self.current_action = None
+            await self.send_status()
+
+    async def unpair_ring_async(self) -> bool:
+        """Remove Bluetooth pairing with ring."""
+        if self.is_busy:
+            await self.send_log("error", "Operation in progress")
+            return False
+
+        self.is_busy = True
+        self.current_action = "unpair"
+        await self.send_status()
+
+        try:
+            # First disconnect if connected
+            if self.client and self.client.is_connected:
+                await self.send_log("info", "Disconnecting before unpair...")
+                await self.client.disconnect()
+
+            success = await remove_bond(
+                adapter=self.adapter,
+                log_callback=lambda level, msg: asyncio.create_task(self.send_log(level, msg))
+            )
+
+            await self.broadcast({
+                "type": "complete",
+                "action": "unpair",
+                "success": success
+            })
+
+            return success
+        except Exception as e:
+            await self.send_log("error", f"Unpair error: {e}")
             return False
         finally:
             self.is_busy = False
