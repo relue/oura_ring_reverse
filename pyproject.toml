@@ -45,7 +45,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["oura", "ml_inference"]
+packages = ["native_parser/oura", "native_parser/ml_inference"]
 
 [tool.uv]
 # Use CPU-only PyTorch index for smaller downloads

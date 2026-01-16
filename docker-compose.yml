@@ -1,13 +1,15 @@
 services:
   parser-api:
-    build: .
+    build:
+      context: ./native_parser
+      dockerfile: Dockerfile
     image: oura-parser-api:latest
     container_name: oura-parser-api
     ports:
       - "8001:8001"
     volumes:
       # Mount data directory (ring_events.txt, ring_data.pb, sync_point.json)
-      - ./input_data:/app/input_data
+      - ./native_parser/input_data:/app/input_data
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

@@ -12,10 +12,33 @@ This project provides:
 
 ## Quick Start
 
-### Python BLE Client
+### Web Dashboard + BLE Client (Recommended)
+
 ```bash
-cd python_client
-python oura_ble_client.py
+# Install uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync
+
+# Start Docker (parser + ML)
+docker compose up -d --build
+
+# Build frontend
+cd native_parser/webapp/frontend && npm install && npm run build && cd ../../..
+
+# Start backend
+uv run uvicorn native_parser.webapp.backend.main:app --host 0.0.0.0 --port 8000
+
+# Open http://localhost:8000
+```
+
+### BLE Setup (Linux)
+```bash
+sudo apt install bluez                    # Debian/Ubuntu
+sudo pacman -S bluez bluez-utils          # Arch/Manjaro
+sudo systemctl enable --now bluetooth
+sudo usermod -a -G bluetooth $USER        # Then logout/login
 ```
 
 ### Android App
