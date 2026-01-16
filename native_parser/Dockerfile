@@ -56,8 +56,15 @@ COPY decrypted_models/ ./decrypted_models/
 # =============================================================================
 COPY ringeventparser_pb2.py ./
 COPY complete_final_pb2.py ./
+COPY oura_ecore.py ./
 COPY oura/ ./oura/
 COPY ml_inference/ ./ml_inference/
+
+# =============================================================================
+# Copy IBI Correction Bridges (for EcoreWrapper / SleepNet ML)
+# =============================================================================
+COPY ibi_correction_bridge_v7 ibi_correction_bridge_v8 ibi_correction_bridge_v9 ibi_correction_bridge_v10 ./
+COPY ibi_correction_bridge_android ./
 
 # =============================================================================
 # Copy Backend + Frontend
