@@ -47,3 +47,13 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Data files (user-specific, large)
+**/input_data/
+output_*.pb
+
+# Ghidra project (large binary files)
+ghidra_project/
+
+# Core dumps
+*.core
