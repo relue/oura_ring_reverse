@@ -26,7 +26,7 @@ Tools for parsing and analyzing Oura Ring data using reverse-engineered native b
 ## Requirements
 
 - Docker
-- Python 3.11+ with [uv](https://github.com/astral-sh/uv)
+- Python 3.11+ with [uv](https://github.com/astral-sh/uv): `curl -LsSf https://astral.sh/uv/install.sh | sh`
 - Node.js 18+
 - Bluetooth 4.0+ adapter (for BLE)
 
