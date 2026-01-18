@@ -5,6 +5,8 @@ _large_files/
 *.xapk
 *.apk
 *.so
+# Exception: include android_root libraries needed for parser
+!native_parser/android_root/**/*.so
 *.pt.enc
 extracted/
 patched/
