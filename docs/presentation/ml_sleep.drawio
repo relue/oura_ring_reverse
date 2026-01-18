@@ -1,0 +1,117 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="ML Sleep Score" id="140089485381008">
+    <mxGraphModel dx="1108" dy="1841" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="140089485382544" value="&lt;b&gt;🧠 ML Models &amp; Sleep Score Calculation&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=24;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="350" y="10" width="450" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482780688" value="&lt;b&gt;🔓 MODEL DECRYPTION&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=1;fillColor=#ffcdd2;strokeColor=#d32f2f;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=13;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="30" y="70" width="180" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="140089485380944" value="&lt;b&gt;📦 APK&lt;/b&gt;&lt;br/&gt;28 encrypted&lt;br/&gt;PyTorch models" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#607d8b;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="30" y="105" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482849936" value="&lt;b&gt;🔒 Encrypted&lt;/b&gt;&lt;br/&gt;AES-256-GCM&lt;br/&gt;[IV][data][tag]" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#d32f2f;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="170" y="105" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482850256" value="&lt;b&gt;🔑 Key Found!&lt;/b&gt;&lt;br/&gt;secrets.json&lt;br/&gt;in APK" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="310" y="105" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482851536" value="&lt;b&gt;✅ Decrypted&lt;/b&gt;&lt;br/&gt;TorchScript .pt&lt;br/&gt;torch.jit.load()" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="450" y="105" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482851728" value="&lt;b&gt;Models:&lt;/b&gt; SleepNet, HRV, Activity, Stress, Steps, Illness..." style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=left;verticalAlign=middle;fontSize=10;fontFamily=Architects Daughter;fontColor=#555;" parent="1" vertex="1">
+          <mxGeometry x="590" y="130" width="320" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482852816" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089485380944" target="140089482849936" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089484583696" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482849936" target="140089482850256" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482890768" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482850256" target="140089482851536" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482891344" value="&lt;b&gt;😴 SLEEP SCORE PIPELINE&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=13;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="30" y="210" width="220" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482891792" value="&lt;b&gt;💓 Raw BLE&lt;/b&gt;&lt;br/&gt;Events&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;IBI, Motion, Temp&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="30" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482893200" value="&lt;b&gt;📄 Parser&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;libringeventparser.so&lt;/font&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;parser_bridge.c&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#607d8b;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="185" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482893776" value="&lt;b&gt;🔧 IBI Correct&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;libappecore.so&lt;/font&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;color:#d32f2f;&#39;&gt;&lt;b&gt;callback hack!&lt;/b&gt;&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="340" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482895504" value="&lt;b&gt;🧠 SleepNet&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;PyTorch .pt&lt;/font&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;color:#7b1fa2;&#39;&gt;&lt;b&gt;neural network!&lt;/b&gt;&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="495" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482897168" value="&lt;b&gt;📊 Aggregate&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;Stage minutes&lt;/font&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;Python&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#00838f;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="650" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482898896" value="&lt;b&gt;📐 Score Calc&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;libappecore.so&lt;/font&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;color:#388e3c;&#39;&gt;&lt;b&gt;formula, not ML&lt;/b&gt;&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" parent="1" vertex="1">
+          <mxGeometry x="805" y="245" width="130" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482920144" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482891792" target="140089482893200" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482922064" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482893200" target="140089482893776" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482922832" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482893776" target="140089482895504" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482923536" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482895504" target="140089482897168" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482891216" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;" parent="1" source="140089482897168" target="140089482898896" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482925968" value="&lt;b&gt;SleepNet classifies every 30 seconds:&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;11:00pm → &lt;font color=&#39;#2196f3&#39;&gt;&lt;b&gt;Light&lt;/b&gt;&lt;/font&gt; (65% sure)&lt;br/&gt;11:30pm → &lt;font color=&#39;#3f51b5&#39;&gt;&lt;b&gt;Deep&lt;/b&gt;&lt;/font&gt; (71% sure)&lt;br/&gt;1:00am  → &lt;font color=&#39;#9c27b0&#39;&gt;&lt;b&gt;REM&lt;/b&gt;&lt;/font&gt; (58% sure)&lt;br/&gt;6:30am  → &lt;font color=&#39;#f44336&#39;&gt;&lt;b&gt;Awake&lt;/b&gt;&lt;/font&gt; (82% sure)&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=10;fontFamily=Architects Daughter;fontColor=#222222;align=left;spacingLeft=8;" parent="1" vertex="1">
+          <mxGeometry x="450" y="375" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482899792" value="BLE Events" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="30" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482933456" value="→ Protobuf" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="185" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482934992" value="ibi_correction_bridge" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="340" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482952848" value="torch.jit.load()" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="495" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482954320" value="Python" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="650" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="7gY1AF76tXDiQXF_UPPD-140089485382545" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="140089482955984" target="140089482965008">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482955984" value="sleep_score_minutes" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=8;fontFamily=Architects Daughter;fontColor=#888;" parent="1" vertex="1">
+          <mxGeometry x="805" y="335" width="130" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="140089482965008" value="&lt;b&gt;Sleep Score: 85/100&lt;/b&gt;&lt;br/&gt;&lt;font style=&#39;font-size:9px;&#39;&gt;├ Total Sleep: 90 &lt;font color=&#39;#666&#39;&gt;(7h 12m)&lt;/font&gt;&lt;br/&gt;├ Deep Sleep: 88 &lt;font color=&#39;#666&#39;&gt;(1h 24m)&lt;/font&gt;&lt;br/&gt;├ REM Sleep: 82 &lt;font color=&#39;#666&#39;&gt;(1h 45m)&lt;/font&gt;&lt;br/&gt;├ Efficiency: 85 &lt;font color=&#39;#666&#39;&gt;(88%)&lt;/font&gt;&lt;br/&gt;├ Latency: 95 &lt;font color=&#39;#666&#39;&gt;(&amp;lt;10min)&lt;/font&gt;&lt;br/&gt;└ Disturbances: 78 &lt;font color=&#39;#666&#39;&gt;(2x)&lt;/font&gt;&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=none;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=10;fontFamily=Architects Daughter;fontColor=#222222;align=left;spacingLeft=8;" parent="1" vertex="1">
+          <mxGeometry x="780" y="375" width="180" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="7gY1AF76tXDiQXF_UPPD-140089485382544" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="140089482898896" target="140089482965008">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="810" y="385" as="sourcePoint" />
+            <mxPoint x="835" y="385" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7gY1AF76tXDiQXF_UPPD-140089485382546" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;startArrow=none;endArrow=classic;endFill=0;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="140089482895504" target="140089482925968">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="860" y="355" as="sourcePoint" />
+            <mxPoint x="860" y="400" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

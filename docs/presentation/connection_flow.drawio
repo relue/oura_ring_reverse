@@ -1,0 +1,121 @@
+<mxfile host="Drawpyo" modified="2026-01-18T13:19:55" agent="Python 3.11, Drawpyo 0.23" version="21.6.5" type="device">
+  <diagram name="Connection Flow" id="139877009217808">
+    <mxGraphModel dx="2037" dy="830" grid="1" gridSize="10" guides="1" toolTips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="139877009224336" value="&lt;b&gt;🔗 Oura Ring Connection Flows&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=24;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="150" y="5" width="500" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="139877009224848" value="&lt;b&gt;📱 Factory Reset&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Clear old key&#xa;from ring&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="55" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877008218064" value="&lt;b&gt;📡 BLE Scan&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Find ring&#xa;&apos;Oura_XXXX&apos;&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="155" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006744208" value="&lt;b&gt;🔗 Connect&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;GATT + bonding&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="255" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006744336" value="&lt;b&gt;🔑 Generate Key&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Random AES-128&#xa;key&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff9c4;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="355" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006744528" value="&lt;b&gt;📤 Send Key&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Write to ring&#xa;characteristic&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="455" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006745680" value="&lt;b&gt;✅ Key Stored!&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Both sides have&#xa;shared secret&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="50" y="555" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006745872" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877009224848" target="139877008218064">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877018098576" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877008218064" target="139877006744208">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006660112" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006744208" target="139877006744336">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006752400" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006744336" target="139877006744528">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006770256" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006744528" target="139877006745680">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006771344" value="&lt;b&gt;📡 BLE Connect&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Resume bonded&#xa;connection&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="280" y="55" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006772496" value="&lt;b&gt;📥 Get Challenge&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Ring sends 16&#xa;random bytes&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff9c4;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="280" y="155" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006773072" value="&lt;b&gt;🔐 Encrypt&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;AES-128-ECB&#xa;with stored key&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="280" y="255" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006744912" value="&lt;b&gt;📤 Send Response&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Write encrypted&#xa;challenge back&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="280" y="355" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006776528" value="&lt;b&gt;✅ Authenticated!&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Ring unlocks&#xa;all commands&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="280" y="455" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006779472" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006771344" target="139877006772496">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006779792" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006772496" target="139877006773072">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006781840" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006773072" target="139877006744912">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006782800" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006744912" target="139877006776528">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006783824" value="&lt;b&gt;📤 GetEvent Cmd&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Request data type&#xa;(HR, Sleep...)&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="55" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006785040" value="&lt;b&gt;📥 BLE Stream&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Ring sends raw&#xa;event packets&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="155" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006785616" value="&lt;b&gt;🖥️ QEMU Parse&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Native .so via&#xa;ARM64 emulation&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="255" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006803856" value="&lt;b&gt;📄 Protobuf&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Structured&#xa;RingData output&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="355" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006805648" value="&lt;b&gt;🐍 Python&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;Decode with&#xa;_pb2.py&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="455" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006808528" value="&lt;b&gt;📊 Health Data!&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:12px;color:#444;&apos;&gt;HR, Sleep, SpO2&#xa;Temp, HRV&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=3;fontSize=14;fontFamily=Architects Daughter;fontColor=#222222;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="510" y="555" width="170" height="70" as="geometry" />
+</mxCell>
+        <mxCell id="139877006808912" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006783824" target="139877006785040">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006784592" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006785040" target="139877006785616">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006812304" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006785616" target="139877006803856">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006748432" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006803856" target="139877006805648">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006814160" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#444444;strokeWidth=3;" edge="1" parent="1" source="139877006805648" target="139877006808528">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006815184" value="&lt;b&gt;1️⃣ First Setup&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;fontSize=16;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="60" y="635" width="150" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139877006816464" value="&lt;b&gt;2️⃣ Auth (every time)&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;fontSize=16;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="280" y="535" width="170" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139877006817808" value="&lt;b&gt;3️⃣ Read Data&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;fontSize=16;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="520" y="635" width="150" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139877006819280" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#388e3c;strokeWidth=3;" edge="1" parent="1" source="139877006745680" target="139877006771344">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139877006853264" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#388e3c;strokeWidth=3;" edge="1" parent="1" source="139877006776528" target="139877006783824">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

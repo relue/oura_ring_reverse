@@ -1,0 +1,43 @@
+<mxfile host="Drawpyo" modified="2026-01-17T15:59:24" agent="Python 3.11, Drawpyo 0.23" version="21.6.5" type="device">
+  <diagram name="Flow" id="139759219211472">
+    <mxGraphModel dx="2037" dy="830" grid="1" gridSize="10" guides="1" toolTips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="139759219201360" value="🔄 Normal Connection" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=16;fontFamily=Helvetica;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="40" y="10" width="320" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139759219203664" value="🔗 Connect" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="50" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219203216" value="Write 98ed0002&lt;br/&gt;Notify 98ed0003" style="whiteSpace=wrap;rounded=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;html=1;strokeWidth=1;fontSize=11;fontFamily=Helvetica;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+  <mxGeometry x="220" y="55" width="140" height="40" as="geometry" />
+</mxCell>
+        <mxCell id="139759219203472" value="🔐 Authenticate" style="whiteSpace=wrap;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="120" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219203152" value="Nonce + AES-ECB&lt;br/&gt;0x2b→0x2c→0x2d→0x2e" style="whiteSpace=wrap;rounded=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;html=1;strokeWidth=1;fontSize=11;fontFamily=Helvetica;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+  <mxGeometry x="220" y="125" width="140" height="40" as="geometry" />
+</mxCell>
+        <mxCell id="139759219001808" value="📡 Subscribe" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="190" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219162128" value="SetFeatureSubscription&lt;br/&gt;0x26/0x27 CCCD" style="whiteSpace=wrap;rounded=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;html=1;strokeWidth=1;fontSize=11;fontFamily=Helvetica;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+  <mxGeometry x="220" y="195" width="140" height="40" as="geometry" />
+</mxCell>
+        <mxCell id="139759219159120" value="✅ Syncing" style="ellipse;whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontStyle=1;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="40" y="260" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219156496" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219203664" target="139759219203472">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759219200528" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219203472" target="139759219001808">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759219152848" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219001808" target="139759219159120">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

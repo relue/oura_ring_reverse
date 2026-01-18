@@ -1,0 +1,27 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '14px', 'fontFamily': 'Helvetica', 'actorBkg': '#dae8fc', 'actorBorder': '#6c8ebf', 'actorTextColor': '#222222', 'signalColor': '#6c8ebf', 'signalTextColor': '#222222', 'noteBkgColor': '#fff2cc', 'noteBorderColor': '#d6b656', 'noteTextColor': '#222222', 'activationBkgColor': '#e1d5e7', 'activationBorderColor': '#9673a6'}}}%%
+
+sequenceDiagram
+    autonumber
+
+    participant App as 📱 Phone App
+    participant Ring as 💍 Oura Ring
+
+    Note over App,Ring: 🔐 Phase 1: Challenge Request
+
+    App->>+Ring: Request Auth Challenge
+    Note right of Ring: Generate 15-byte<br/>random nonce
+    Ring-->>-App: Return Random Nonce
+
+    Note over App,Ring: 🔑 Phase 2: Prove Identity
+
+    Note left of App: Encrypt nonce using<br/>shared secret (AES-128)
+    App->>+Ring: Send Encrypted Response
+    Note right of Ring: Decrypt and verify<br/>nonce matches
+
+    alt ✅ Keys Match
+        Ring-->>-App: Authentication Success
+        Note over App,Ring: 🎉 Session Established - Ready to sync
+    else ❌ Wrong Key
+        Ring-->>App: Authentication Failed
+        Note over App,Ring: ⚠️ Wrong key or not original device
+    end

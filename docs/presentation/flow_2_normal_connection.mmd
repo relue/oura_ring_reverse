@@ -1,0 +1,17 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '20px', 'fontFamily': 'Helvetica'}}}%%
+
+flowchart TB
+    title["<b>🔄 Normal Connection</b>"]
+    B1["🔗 Connect"]
+    B2["🔐 Authenticate"]
+    B3["📡 Subscribe"]
+    B4(["✅ Syncing"])
+
+    title ~~~ B1
+    B1 --> B2 --> B3 --> B4
+
+    style title fill:none,stroke:none
+    style B1 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style B2 fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+    style B3 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style B4 fill:#d5e8d4,stroke:#82b366,stroke-width:2px

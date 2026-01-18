@@ -1,0 +1,46 @@
+<mxfile host="Drawpyo" modified="2026-01-17T15:59:24" agent="Python 3.11, Drawpyo 0.23" version="21.6.5" type="device">
+  <diagram name="Flow" id="139759220248784">
+    <mxGraphModel dx="2037" dy="830" grid="1" gridSize="10" guides="1" toolTips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="139759219051088" value="🆕 First-Time Setup" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=16;fontFamily=Helvetica;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="40" y="10" width="160" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139759221626832" value="🔄 Factory Reset" style="whiteSpace=wrap;rounded=1;fillColor=#f8cecc;strokeColor=#b85450;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="50" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759221633424" value="🔗 Connect" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="120" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219154576" value="🤝 Pair" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="190" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219153616" value="🔑 SetAuthKey" style="whiteSpace=wrap;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="260" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219153488" value="🕐 SyncTime" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontColor=#222222;arcSize=12;" vertex="1" parent="1">
+  <mxGeometry x="40" y="330" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219154896" value="✅ Ready" style="ellipse;whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=14;fontFamily=Helvetica;fontStyle=1;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="40" y="400" width="160" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139759219157072" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759221626832" target="139759221633424">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759223162512" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759221633424" target="139759219154576">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759219157264" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219154576" target="139759219153616">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759219159760" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219153616" target="139759219153488">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139759219160272" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;" edge="1" parent="1" source="139759219153488" target="139759219154896">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

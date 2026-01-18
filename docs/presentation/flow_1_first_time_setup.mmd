@@ -1,0 +1,21 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '20px', 'fontFamily': 'Helvetica'}}}%%
+
+flowchart TB
+    title["<b>🆕 First-Time Setup</b>"]
+    A1["🔄 Factory Reset"]
+    A2["🔗 Connect"]
+    A3["🤝 Pair"]
+    A4["🔑 SetAuthKey"]
+    A5["🕐 SyncTime"]
+    A6(["✅ Ready"])
+
+    title ~~~ A1
+    A1 --> A2 --> A3 --> A4 --> A5 --> A6
+
+    style title fill:none,stroke:none
+    style A1 fill:#f8cecc,stroke:#b85450,stroke-width:2px
+    style A2 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style A3 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style A4 fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+    style A5 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style A6 fill:#d5e8d4,stroke:#82b366,stroke-width:2px

@@ -1,0 +1,19 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '20px', 'fontFamily': 'Helvetica'}}}%%
+
+flowchart TB
+    title["<b>📥 Read Data</b>"]
+    C1["📡 Subscribed"]
+    C2["📤 Request Data"]
+    C3["📨 Receive Chunks"]
+    C4["🔄 Parse Response"]
+    C5(["✅ Data Ready"])
+
+    title ~~~ C1
+    C1 --> C2 --> C3 --> C4 --> C5
+
+    style title fill:none,stroke:none
+    style C1 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style C2 fill:#e1d5e7,stroke:#9673a6,stroke-width:2px
+    style C3 fill:#ffe6cc,stroke:#d79b00,stroke-width:2px
+    style C4 fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px
+    style C5 fill:#d5e8d4,stroke:#82b366,stroke-width:2px

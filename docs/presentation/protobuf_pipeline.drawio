@@ -1,0 +1,121 @@
+<mxfile host="Drawpyo" modified="2026-01-17T22:18:07" agent="Python 3.11, Drawpyo 0.23" version="21.6.5" type="device">
+  <diagram name="Protobuf Pipeline" id="139911366670672">
+    <mxGraphModel dx="2037" dy="830" grid="1" gridSize="10" guides="1" toolTips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="139911366662032" value="&lt;b&gt;🔬 Native Protobuf Parsing Pipeline&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=26;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="420" y="15" width="550" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="139911368021776" value="&lt;b&gt;⚠️ CHALLENGES:&lt;/b&gt;  ARM64 lib on x86_64 • Android Bionic vs Linux glibc • No docs • 109K obfuscated lines" style="whiteSpace=wrap;rounded=1;fillColor=#ffcdd2;strokeColor=#d32f2f;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=13;fontFamily=Architects Daughter;fontColor=#222222;verticalAlign=middle;align=center;spacingTop=5;spacingLeft=10;" vertex="1" parent="1">
+  <mxGeometry x="285" y="55" width="820" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="139911366944528" value="&lt;b&gt;─ PHASE 1: Schema Extraction ─&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fafafa;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=13;fontFamily=Architects Daughter;fontColor=#222222;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;" vertex="1" parent="1">
+  <mxGeometry x="30" y="100" width="260" height="280" as="geometry" />
+</mxCell>
+        <mxCell id="139911365421584" value="&lt;b&gt;📱 Java Decompile&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;109,000 lines&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="65" y="135" width="180" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365421776" value="&lt;b&gt;🌳 tree-sitter parse&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;375 classes&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="65" y="195" width="180" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365421712" value="&lt;b&gt;🔄 Type resolution&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;k4→int64&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="65" y="255" width="180" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365422032" value="&lt;b&gt;📄 .proto file&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;2,070 lines&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="65" y="315" width="180" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365426512" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="139911365421584" target="139911365421776">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139911367155216" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="139911365421776" target="139911365421712">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139911365364816" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;sketch=1;jettySize=auto;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="139911365421712" target="139911365422032">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="139911365494672" value="&lt;b&gt;─ PHASE 2: QEMU Native Execution ─&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff8e1;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=13;fontFamily=Architects Daughter;fontColor=#222222;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;" vertex="1" parent="1">
+  <mxGeometry x="310" y="100" width="420" height="280" as="geometry" />
+</mxCell>
+        <mxCell id="139911365497296" value="&lt;b&gt;🖥️ QEMU User-Mode&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;ARM64 → x86_64 translation&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="325" y="135" width="180" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="139911365497872" value="&lt;b&gt;📂 Android Sysroot&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;color:#555;&apos;&gt;linker64 + bionic libc&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#eceff1;strokeColor=#607d8b;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="520" y="135" width="160" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365499920" value="&lt;b&gt;🔧 C Bridge&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;color:#555;&apos;&gt;NDK-compiled ARM64&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff9c4;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="340" y="195" width="140" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365501456" value="&lt;b&gt;📦 libringeventparser.so&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;color:#555;&apos;&gt;Oura&apos;s native parser&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="510" y="195" width="180" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365503184" value="&lt;b&gt;🔧 Bridge Requirements:&lt;/b&gt;&#xa;• dlsym() C++ mangled names&#xa;• Session(options=0xFF)&#xa;• set_output_modes(0xFFFF)&#xa;• Parse events one-by-one" style="whiteSpace=wrap;rounded=0;fillColor=#e8f5e9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=1;fontSize=9;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+  <mxGeometry x="325" y="245" width="200" height="90" as="geometry" />
+</mxCell>
+        <mxCell id="139911365504848" value="&lt;b&gt;💾 ring_data.pb&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;682KB protobuf&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="545" y="305" width="140" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365506576" value="&lt;b&gt;─ PHASE 3: Python Decode ─&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fafafa;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=13;fontFamily=Architects Daughter;fontColor=#222222;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;" vertex="1" parent="1">
+  <mxGeometry x="750" y="100" width="200" height="280" as="geometry" />
+</mxCell>
+        <mxCell id="139911365495056" value="&lt;b&gt;⚙️ protoc&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#555;&apos;&gt;.proto → _pb2.py&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff9c4;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="780" y="140" width="140" height="45" as="geometry" />
+</mxCell>
+        <mxCell id="139911365526608" value="from ring_pb2 import *&#xa;&#xa;data = RingData()&#xa;data.ParseFromString(pb)&#xa;&#xa;print(data.ibi_events)" style="whiteSpace=wrap;rounded=0;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+  <mxGeometry x="770" y="200" width="160" height="90" as="geometry" />
+</mxCell>
+        <mxCell id="139911365528272" value="&lt;b&gt;✅ Health Data!&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=12;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="780" y="310" width="140" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="139911365529936" value="&lt;b&gt;─ RAW vs PARSED ─&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fafafa;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=13;fontFamily=Architects Daughter;fontColor=#222222;verticalAlign=top;align=left;spacingTop=5;spacingLeft=10;" vertex="1" parent="1">
+  <mxGeometry x="30" y="400" width="920" height="200" as="geometry" />
+</mxCell>
+        <mxCell id="139911365531856" value="&lt;b&gt;📥 RAW (BLE hex):&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=left;verticalAlign=middle;fontSize=11;fontFamily=Architects Daughter;fontColor=#333;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="50" y="435" width="130" height="20" as="geometry" />
+</mxCell>
+        <mxCell id="139911365533584" value="08 c0 f7 e8 a7 06 10 48&#xa;18 64 20 02 28 98 01 30&#xa;e8 07 38 03 42 0a 08 48&#xa;...(binary protobuf)" style="whiteSpace=wrap;rounded=0;fillColor=#cfd8dc;strokeColor=#37474f;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+  <mxGeometry x="50" y="460" width="220" height="90" as="geometry" />
+</mxCell>
+        <mxCell id="139911365536208" value="&lt;b&gt;──▶&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=18;fontFamily=Architects Daughter;fontColor=#555555;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="290" y="490" width="50" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139911365537232" value="&lt;b&gt;🖥️ QEMU + Bridge&lt;/b&gt;&#xa;&#xa;env -i qemu-aarch64&#xa;  -L ./android_root&#xa;  ./parser_bridge" style="whiteSpace=wrap;rounded=0;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=1;fontSize=9;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+  <mxGeometry x="355" y="445" width="180" height="100" as="geometry" />
+</mxCell>
+        <mxCell id="139911365539984" value="&lt;b&gt;──▶&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=18;fontFamily=Architects Daughter;fontColor=#555555;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="550" y="490" width="50" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139911365540752" value="&lt;b&gt;📄 Protobuf&lt;/b&gt;&#xa;682KB binary" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=10;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="610" y="465" width="100" height="55" as="geometry" />
+</mxCell>
+        <mxCell id="139911365543440" value="&lt;b&gt;──▶&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=18;fontFamily=Architects Daughter;fontColor=#555555;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="720" y="490" width="50" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="139911365545424" value="{&#xa;  &quot;timestamp&quot;: 1705512000,&#xa;  &quot;heart_rate&quot;: 72,&#xa;  &quot;spo2&quot;: 98,&#xa;  &quot;sleep_stage&quot;: &quot;DEEP&quot;,&#xa;  &quot;ibi&quot;: [820, 815, 830]&#xa;}" style="whiteSpace=wrap;rounded=0;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;" vertex="1" parent="1">
+  <mxGeometry x="780" y="435" width="200" height="120" as="geometry" />
+</mxCell>
+        <mxCell id="139911365546896" value="&lt;b&gt;❤️ Heart Rate&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="50" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365547536" value="&lt;b&gt;😴 Sleep&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1bee7;strokeColor=#7b1fa2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="165" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365549584" value="&lt;b&gt;🌡️ Temp&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#ffe0b2;strokeColor=#e65100;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="280" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365551312" value="&lt;b&gt;🫁 SpO2&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#c8e6c9;strokeColor=#388e3c;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="395" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365553040" value="&lt;b&gt;🏃 Activity&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff9c4;strokeColor=#f9a825;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="510" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365425680" value="&lt;b&gt;📊 HRV/IBI&lt;/b&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#bbdefb;strokeColor=#1976d2;sketch=1;dashed=0;curveFitting=1;jiggle=2;hachureGap=4;html=1;strokeWidth=2;fontSize=11;fontFamily=Architects Daughter;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="625" y="615" width="100" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="139911365555856" value="&lt;b&gt;✅ 144 messages  ✅ 44 enums  ✅ 962 fields  ✅ 109-field Event oneof&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=12;fontFamily=Architects Daughter;fontColor=#388e3c;fontStyle=1;" vertex="1" parent="1">
+  <mxGeometry x="700" y="615" width="550" height="25" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

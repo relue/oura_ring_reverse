@@ -1,0 +1,85 @@
+<mxfile host="Drawpyo" modified="2026-01-17T16:45:23" agent="Python 3.11, Drawpyo 0.23" version="21.6.5" type="device">
+  <diagram name="Frida Hooks" id="140095592231056">
+    <mxGraphModel dx="2037" dy="830" grid="1" gridSize="10" guides="1" toolTips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="140095592232528" value="&lt;b&gt;🔍 Frida Runtime Instrumentation&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=18;fontFamily=Helvetica;fontColor=#222222;" vertex="1" parent="1">
+  <mxGeometry x="180" y="5" width="400" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="140095589995600" value="📱 App connects to 💍 Ring" style="whiteSpace=wrap;rounded=1;fillColor=#6c8ebf;strokeColor=#3a5a8c;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=11;fontFamily=Helvetica;fontColor=white;fontStyle=1;arcSize=15;" vertex="1" parent="1">
+  <mxGeometry x="30" y="50" width="180" height="35" as="geometry" />
+</mxCell>
+        <mxCell id="140095592232592" value="triggers auth →" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+  <mxGeometry x="215" y="57" width="100" height="20" as="geometry" />
+</mxCell>
+        <mxCell id="140095589750416" value="&lt;b&gt;📱 Oura App (Java)&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontFamily=Helvetica;fontColor=#333333;" vertex="1" parent="1">
+  <mxGeometry x="40" y="95" width="180" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="140095589752784" value="&lt;b&gt;STEP 1&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=12;fontFamily=Helvetica;fontColor=#666666;" vertex="1" parent="1">
+  <mxGeometry x="30" y="137" width="55" height="20" as="geometry" />
+</mxCell>
+        <mxCell id="140095589752912" value="&lt;b&gt;GetAuthNonce&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#666;&apos;&gt;Request challenge&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=12;fontFamily=Helvetica;fontColor=#222222;arcSize=10;" vertex="1" parent="1">
+  <mxGeometry x="90" y="125" width="130" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="140095589754256" value="&lt;b&gt;STEP 2&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=12;fontFamily=Helvetica;fontColor=#666666;" vertex="1" parent="1">
+  <mxGeometry x="30" y="222" width="55" height="20" as="geometry" />
+</mxCell>
+        <mxCell id="140095589755728" value="&lt;b&gt;AES.doFinal()&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#666;&apos;&gt;Encrypt with key&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=12;fontFamily=Helvetica;fontColor=#222222;arcSize=10;" vertex="1" parent="1">
+  <mxGeometry x="90" y="210" width="130" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="140095589757008" value="&lt;b&gt;STEP 3&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=left;verticalAlign=middle;fontStyle=1;fontSize=12;fontFamily=Helvetica;fontColor=#666666;" vertex="1" parent="1">
+  <mxGeometry x="30" y="307" width="55" height="20" as="geometry" />
+</mxCell>
+        <mxCell id="140095589759760" value="&lt;b&gt;Authenticate&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:10px;color:#666;&apos;&gt;Send to ring&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=12;fontFamily=Helvetica;fontColor=#222222;arcSize=10;" vertex="1" parent="1">
+  <mxGeometry x="90" y="295" width="130" height="50" as="geometry" />
+</mxCell>
+        <mxCell id="140095589760720" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="140095589752912" target="140095589755728">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="140095589683344" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=0;jettySize=auto;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="140095589755728" target="140095589759760">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="140095589779344" value="🎣" style="ellipse;whiteSpace=wrap;rounded=0;fillColor=#e85d04;strokeColor=#bf4a00;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=20;fontFamily=Helvetica;fontColor=white;" vertex="1" parent="1">
+  <mxGeometry x="235" y="137" width="32" height="32" as="geometry" />
+</mxCell>
+        <mxCell id="140095589780496" value="🎣" style="ellipse;whiteSpace=wrap;rounded=0;fillColor=#e85d04;strokeColor=#bf4a00;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=20;fontFamily=Helvetica;fontColor=white;" vertex="1" parent="1">
+  <mxGeometry x="235" y="222" width="32" height="32" as="geometry" />
+</mxCell>
+        <mxCell id="140095589782096" value="🎣" style="ellipse;whiteSpace=wrap;rounded=0;fillColor=#e85d04;strokeColor=#bf4a00;shadow=1;dashed=0;html=1;strokeWidth=2;fontSize=20;fontFamily=Helvetica;fontColor=white;" vertex="1" parent="1">
+  <mxGeometry x="235" y="307" width="32" height="32" as="geometry" />
+</mxCell>
+        <mxCell id="140095589783504" value="&lt;b&gt;🔍 Frida Captures&lt;/b&gt;" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontStyle=1;fontSize=13;fontFamily=Helvetica;fontColor=#2e7d32;" vertex="1" parent="1">
+  <mxGeometry x="320" y="95" width="180" height="25" as="geometry" />
+</mxCell>
+        <mxCell id="140095589753616" value="📋 &lt;b&gt;Nonce&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;&apos;&gt;16 random bytes&#xa;from ring challenge&lt;/font&gt;" style="whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;dashed=0;shape=note;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;backgroundOutline=1;" vertex="1" parent="1">
+  <mxGeometry x="295" y="125" width="140" height="55" as="geometry" />
+</mxCell>
+        <mxCell id="140095589785808" value="🔑 &lt;b&gt;Key + Cipher&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;&apos;&gt;Auth key from DB&#xa;+ encrypted output&lt;/font&gt;" style="whiteSpace=wrap;rounded=0;fillColor=#ffe6cc;strokeColor=#d79b00;dashed=0;shape=note;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;backgroundOutline=1;" vertex="1" parent="1">
+  <mxGeometry x="295" y="210" width="140" height="55" as="geometry" />
+</mxCell>
+        <mxCell id="140095589787024" value="✅ &lt;b&gt;Result&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-size:9px;&apos;&gt;SUCCESS (0x00)&#xa;or FAIL status&lt;/font&gt;" style="whiteSpace=wrap;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;dashed=0;shape=note;html=1;strokeWidth=1;fontSize=10;fontFamily=Courier New;fontColor=#333333;align=left;spacingLeft=6;spacingTop=4;backgroundOutline=1;" vertex="1" parent="1">
+  <mxGeometry x="295" y="295" width="140" height="55" as="geometry" />
+</mxCell>
+        <mxCell id="140095589790032" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=1;jettySize=auto;strokeColor=#e85d04;strokeWidth=2;" edge="1" parent="1" source="140095589779344" target="140095589753616">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="140095589779536" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=1;jettySize=auto;strokeColor=#e85d04;strokeWidth=2;" edge="1" parent="1" source="140095589780496" target="140095589785808">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="140095589792592" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;rounded=1;jettySize=auto;strokeColor=#e85d04;strokeWidth=2;" edge="1" parent="1" source="140095589782096" target="140095589787024">
+  <mxGeometry relative="1" as="geometry" />
+</mxCell>
+        <mxCell id="140095589788688" value="🗄️ &lt;b&gt;Also hooked:&lt;/b&gt; DbRingConfiguration.getAuthKey() → captures stored 16-byte shared secret" style="whiteSpace=wrap;rounded=1;fillColor=#fff8e1;strokeColor=#ffb300;dashed=0;html=1;strokeWidth=1;fontSize=11;fontFamily=Helvetica;fontColor=#555555;align=center;arcSize=10;" vertex="1" parent="1">
+  <mxGeometry x="45" y="365" width="420" height="30" as="geometry" />
+</mxCell>
+        <mxCell id="140095589811280" value="&lt;b&gt;Console Output:&lt;/b&gt;&lt;br/&gt;&lt;font style=&apos;font-family:monospace;font-size:9px;&apos;&gt;STEP 1b: Nonce: a1 b2 c3 d4 ...&lt;br/&gt;STEP 2b: Encrypted: 7f 8e 9d ...&lt;br/&gt;STEP 3b: ✅ AUTH SUCCESS!&lt;/font&gt;" style="whiteSpace=wrap;rounded=1;fillColor=#263238;strokeColor=#455a64;dashed=0;html=1;strokeWidth=1;fontSize=10;fontFamily=Helvetica;fontColor=#e0e0e0;align=left;spacingLeft=8;arcSize=8;" vertex="1" parent="1">
+  <mxGeometry x="470" y="130" width="200" height="65" as="geometry" />
+</mxCell>
+        <mxCell id="140095589813008" value="real-time&lt;br/&gt;output →" style="text;whiteSpace=wrap;rounded=0;fillColor=none;strokeColor=none;dashed=0;html=1;align=center;verticalAlign=middle;fontSize=9;fontColor=#888888;fontStyle=2;" vertex="1" parent="1">
+  <mxGeometry x="438" y="165" width="50" height="35" as="geometry" />
+</mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
