@@ -35,13 +35,14 @@ from oura.analysis.sleep import SleepAnalyzer
 # BLE handler for WebSocket communication (optional - requires bleak)
 try:
     from webapp.backend.ble_handler import get_ble_manager, BLEConnectionManager
-    from oura.ble.bonding import list_bluetooth_adapters
+    from oura.ble.bonding import list_bluetooth_adapters, list_bluetooth_adapters_with_info
     BLE_AVAILABLE = True
 except ImportError:
     BLE_AVAILABLE = False
     get_ble_manager = None
     BLEConnectionManager = None
     list_bluetooth_adapters = None
+    list_bluetooth_adapters_with_info = None
 
 app = FastAPI(
     title="Oura Ring Data API",
@@ -939,15 +940,18 @@ async def get_sleep_stages_dashboard(
         for e in docker_epochs:
             stage = e['stage']  # Already in standard format (0=Awake, 1=Light, 2=Deep, 3=REM)
             ts_ms = e['timestamp']
-            ml_timestamps.append(ts_ms / 1000)  # Convert to seconds
+            ts_sec = ts_ms / 1000
+            ml_timestamps.append(ts_sec)  # Convert to seconds
             stages.append(stage)
             display_stage = standard_to_display.get(stage, stage)
+            # Reformat time in LOCAL timezone (Docker uses UTC)
+            time_str = datetime.fromtimestamp(ts_sec).strftime("%H:%M")
             epochs.append({
                 "index": e['index'],
                 "timestamp": ts_ms,
                 "stage": display_stage,
                 "stage_name": stage_names.get(display_stage, "Unknown"),
-                "time": e['time'],
+                "time": time_str,  # Use local time, not Docker's UTC time
                 "color": stage_colors.get(display_stage, "#gray"),
             })
         sleep_timestamps = [int(ts * 1000) for ts in ml_timestamps]
@@ -1178,6 +1182,13 @@ async def ble_websocket(websocket: WebSocket):
                 key_hex = data.get("key")
                 await ble_manager.authenticate(key_hex=key_hex)
 
+            elif action == "set-auth-key":
+                key_hex = data.get("key")
+                if not key_hex:
+                    await ble_manager.send_log("error", "No auth key provided")
+                else:
+                    await ble_manager.set_auth_key(key_hex=key_hex)
+
             elif action == "sync-time":
                 await ble_manager.sync_time()
 
@@ -1207,6 +1218,9 @@ async def ble_websocket(websocket: WebSocket):
 
             elif action == "update-ring":
                 await ble_manager.update_ring()
+
+            elif action == "full-sync":
+                await ble_manager.full_sync()
 
             else:
                 await websocket.send_json({
@@ -1242,21 +1256,31 @@ async def get_ble_status():
     )
 
 
+class AdapterInfo(BaseModel):
+    id: str
+    name: str
+    product: str
+
+
 class AdapterList(BaseModel):
-    adapters: List[str]
+    adapters: List[AdapterInfo]
     default: str
 
 
-@app.get("/ble/adapters", response_model=AdapterList)
+@app.get("/ble/adapters")
 async def get_ble_adapters():
-    """List available Bluetooth adapters."""
-    if not BLE_AVAILABLE:
-        return AdapterList(adapters=[], default="none")
-    adapters = list_bluetooth_adapters()
-    return AdapterList(
-        adapters=adapters if adapters else ["hci0"],
-        default="hci0",
-    )
+    """List available Bluetooth adapters with names."""
+    if not BLE_AVAILABLE or not list_bluetooth_adapters_with_info:
+        return {"adapters": [], "default": "none"}
+
+    adapters_info = list_bluetooth_adapters_with_info()
+    if not adapters_info:
+        return {"adapters": [{"id": "hci0", "name": "hci0", "product": ""}], "default": "hci0"}
+
+    return {
+        "adapters": adapters_info,
+        "default": adapters_info[0]["id"],  # Use first available adapter as default
+    }
 
 
 @app.post("/ble/reload-data")
@@ -1295,21 +1319,24 @@ async def get_sync_info():
     last_synced_seq = None
     events_count = None
 
-    # Load sync point
+    # Get last_updated from events file modification time (not sync_point)
+    if events_file.exists():
+        try:
+            from datetime import datetime
+            mtime = events_file.stat().st_mtime
+            last_updated = datetime.fromtimestamp(mtime).isoformat()
+            # Count events
+            with open(events_file, 'r') as f:
+                events_count = sum(1 for _ in f)
+        except:
+            pass
+
+    # Load sync point for seq only
     if sync_point_file.exists():
         try:
             with open(sync_point_file, 'r') as f:
                 sync_data = json.load(f)
-                last_updated = sync_data.get('timestamp')
                 last_synced_seq = sync_data.get('last_synced_seq')
-        except:
-            pass
-
-    # Count events
-    if events_file.exists():
-        try:
-            with open(events_file, 'r') as f:
-                events_count = sum(1 for _ in f)
         except:
             pass
 

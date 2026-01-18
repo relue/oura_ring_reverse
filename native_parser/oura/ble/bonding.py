@@ -70,6 +70,58 @@ def list_bluetooth_adapters() -> List[str]:
     return sorted(adapters)
 
 
+def list_bluetooth_adapters_with_info() -> List[dict]:
+    """List available Bluetooth adapters with names and info.
+
+    Returns list of dicts with: id, name, address, product
+    """
+    adapters = []
+    bt_path = Path("/sys/class/bluetooth")
+    if not bt_path.exists():
+        return adapters
+
+    for adapter_dir in sorted(bt_path.iterdir()):
+        if not adapter_dir.name.startswith("hci"):
+            continue
+
+        hci = adapter_dir.name
+        info = {"id": hci, "name": hci, "address": "", "product": ""}
+
+        # Get USB product name
+        try:
+            device_path = adapter_dir / "device"
+            if device_path.exists():
+                real_path = device_path.resolve()
+                product_file = real_path.parent / "product"
+                if product_file.exists():
+                    info["product"] = product_file.read_text().strip()
+                # Get vendor/product IDs
+                vendor_file = real_path.parent / "idVendor"
+                product_id_file = real_path.parent / "idProduct"
+                if vendor_file.exists() and product_id_file.exists():
+                    vendor = vendor_file.read_text().strip()
+                    product_id = product_id_file.read_text().strip()
+                    # Known vendors
+                    if vendor == "8087":
+                        info["product"] = info["product"] or "Intel Bluetooth"
+                    elif vendor == "2357":
+                        info["product"] = info["product"] or "TP-Link"
+                    elif vendor == "0a12":
+                        info["product"] = info["product"] or "CSR Bluetooth"
+        except Exception:
+            pass
+
+        # Build display name
+        if info["product"]:
+            info["name"] = f"{hci} ({info['product']})"
+        else:
+            info["name"] = hci
+
+        adapters.append(info)
+
+    return adapters
+
+
 async def bond_ring(
     adapter: str = DEFAULT_ADAPTER,
     scan_timeout: float = 15.0,
@@ -191,24 +243,29 @@ async def bond_ring(
     if stderr:
         log('warn', f"  {stderr}")
 
-    # Step 5: Verify bond
+    # Step 5: Verify bond (optional - requires root to read BlueZ files)
     log('info', "[5/5] Verifying bond...")
-    bond_file = Path(f"/var/lib/bluetooth/{adapter_addr}/{identity_addr}/info")
-    if bond_file.exists():
-        log('success', f"Bond file exists: {bond_file}")
-        try:
-            content = bond_file.read_text()
-            for i, line in enumerate(content.splitlines()):
-                if "[IdentityResolvingKey]" in line:
-                    lines = content.splitlines()
-                    if i + 1 < len(lines) and "Key=" in lines[i + 1]:
-                        irk = lines[i + 1].split("=")[1]
-                        log('info', f"IRK: {irk}")
-                    break
-        except:
-            pass
-    else:
-        log('warn', f"Bond file not found at {bond_file}")
+    try:
+        bond_file = Path(f"/var/lib/bluetooth/{adapter_addr}/{identity_addr}/info")
+        if bond_file.exists():
+            log('success', f"Bond file exists: {bond_file}")
+            try:
+                content = bond_file.read_text()
+                for i, line in enumerate(content.splitlines()):
+                    if "[IdentityResolvingKey]" in line:
+                        lines = content.splitlines()
+                        if i + 1 < len(lines) and "Key=" in lines[i + 1]:
+                            irk = lines[i + 1].split("=")[1]
+                            log('info', f"IRK: {irk}")
+                        break
+            except PermissionError:
+                log('info', "Cannot read bond details (needs root)")
+        else:
+            log('warn', f"Bond file not found at {bond_file}")
+    except PermissionError:
+        # Can't even check if file exists - BlueZ dir is root-only
+        log('info', "Cannot verify bond file (BlueZ dir requires root)")
+        log('info', "Bond likely succeeded - try connecting")
 
     # Done!
     log('success', "=" * 60)

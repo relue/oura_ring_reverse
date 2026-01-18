@@ -309,7 +309,7 @@ class RingDataReader:
                 # Use protobuf timestamps directly (already UTC after preprocessing)
                 self._spo2 = SpO2Data(
                     timestamps=list(ev.timestamp),
-                    spo2_values=list(ev.spo2),
+                    spo2_values=list(ev.spo2_value),
                     beat_indices=list(ev.beat_index),
                 )
         return self._spo2

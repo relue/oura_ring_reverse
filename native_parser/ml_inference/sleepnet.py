@@ -562,7 +562,8 @@ class SleepNetModel:
         spo2_data = []
         sleep_duration = bedtime_end - bedtime_start
 
-        spo2_vals = spo2.spo2_percentage if hasattr(spo2, 'spo2_percentage') and spo2.spo2_percentage else []
+        # Use correct attribute name from SpO2Data
+        spo2_vals = spo2.spo2_values if hasattr(spo2, 'spo2_values') and spo2.spo2_values else []
 
         if spo2_vals:
             n_spo2 = len(spo2_vals)
@@ -574,7 +575,8 @@ class SleepNetModel:
                 spo2_data.append([ts_sec, val])
 
         if not spo2_data:
-            # Minimal placeholder
+            # Minimal placeholder - model handles sparse SpO2 data
+            print("[SleepNet] WARNING: No SpO2 data - using placeholder (constant 97%)")
             spo2_data = [[bedtime_start, 97.0], [bedtime_end, 97.0]]
 
         return torch.tensor(spo2_data, dtype=torch.float64)

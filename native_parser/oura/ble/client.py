@@ -248,24 +248,8 @@ class OuraClient:
         self.is_connected = True
         self._emit_status()
 
-        # Check if already paired
-        needs_pairing = False
-        if self.device:
-            try:
-                props = self.device.details.get('props', {})
-                is_paired = props.get('Paired', False) or props.get('Bonded', False)
-                needs_pairing = not is_paired
-            except:
-                needs_pairing = True
-
-        if needs_pairing:
-            self._log('info', "Attempting to pair...")
-            try:
-                await self.client.pair(protection_level=2)
-                self._log('success', "Paired successfully!")
-            except Exception as e:
-                self._log('warn', f"Pair attempt: {e}")
-                self._log('info', "Pairing failed - will try to continue (ring may already be paired)")
+        # Note: Pairing is now handled separately via the Pair button
+        # Connect just establishes the BLE connection
 
         # Save bonded address
         identity_addr = self._get_identity_address_from_bluez()
@@ -608,17 +592,23 @@ class OuraClient:
         else:
             self._log('warn', "No sync point - timestamp detection disabled")
 
-        # Determine target sequence for fetch_all mode
-        if fetch_all and target_seq < 0:
+        # Determine starting point for fetch
+        # With timestamp-based approach, we don't need binary search if start_seq is provided
+        # End detection is handled by "caught up to real-time" check (timestamp near now)
+        if start_seq >= 0:
+            # We know where to start - no binary search needed
+            self._log('info', f"Starting from timestamp {start_seq} (binary search skipped)")
+        elif fetch_all and target_seq < 0:
+            # No start point and fetch_all - use binary search to find range
             last_valid_seq, first_valid_seq = await self.find_last_event_seq()
             if last_valid_seq < 0:
                 self._log('warn', "No events found on ring!")
                 return []
             target_seq = last_valid_seq
-            if start_seq < 0:
-                start_seq = 0  # Start from beginning for complete fetch
+            start_seq = 0  # Start from beginning for complete fetch
             self._log('info', f"FETCH ALL: seq {start_seq} to {target_seq} (batched, ~50K per batch)")
         elif start_seq < 0:
+            # No start point - use binary search
             last_valid_seq, first_valid_seq = await self.find_last_event_seq()
             if last_valid_seq < 0:
                 self._log('warn', "No events found on ring!")

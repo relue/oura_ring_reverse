@@ -342,8 +342,9 @@ async def main():
                     event_filter.add_blacklist(tag)
                 print(f"[>] Debug events filtered out: {[hex(t) for t in debug_tags]}")
 
-            # Fetch data
+            # Fetch data (start from 0 for full sync - no binary search needed)
             data = await client.get_data(
+                start_seq=0 if args.get_all_data else -1,
                 event_filter=event_filter,
                 fetch_all=args.get_all_data
             )

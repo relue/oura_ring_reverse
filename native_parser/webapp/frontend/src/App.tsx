@@ -459,8 +459,9 @@ function SleepStagesDashboard() {
   // Invert: Deep(0)->3, Light(1)->2, REM(2)->1, Awake(3)->0
   // Merge HR samples by time for overlay
   const hrByTime = new Map((data?.hr_samples || []).map((s: any) => [s.time, s.hr]))
-  const hypnogramData = data?.epochs?.map((epoch: any) => ({
+  const hypnogramData = data?.epochs?.map((epoch: any, idx: number) => ({
     ...epoch,
+    idx,  // Unique index for X-axis to avoid duplicate time issues
     stageY: 3 - epoch.stage,
     hr: hrByTime.get(epoch.time) || null,
   })) || []
@@ -543,7 +544,6 @@ function SleepStagesDashboard() {
           <ScoreContributor label="REM" value={sleepScore.rem_sleep} />
           <ScoreContributor label="Latency" value={sleepScore.latency} />
           <ScoreContributor label="Timing" value={sleepScore.timing} />
-          <ScoreContributor label="Restfulness" value={sleepScore.restfulness} />
         </div>
       </div>
 
@@ -560,9 +560,11 @@ function SleepStagesDashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={`${COLORS.purple}15`} />
               <XAxis
-                dataKey="time"
+                dataKey="idx"
                 stroke="#4b5563"
+                domain={[0, hypnogramData.length + 60]}
                 interval={Math.floor(hypnogramData.length / 8)}
+                tickFormatter={(idx) => hypnogramData[idx]?.time || ''}
                 tick={{ fontSize: 10, fontFamily: 'monospace', fill: '#6b7280' }}
               />
               <YAxis
@@ -585,11 +587,15 @@ function SleepStagesDashboard() {
               />
               <Tooltip
                 {...tooltipStyle(COLORS.purple)}
-                formatter={(value: any, name: any) => {
+                formatter={(value: any, name: any, props: any) => {
                   if (name === 'hr') return value ? [`${value} bpm`, 'Heart Rate'] : ['--', 'Heart Rate']
-                  return [value, 'Stage']
+                  const stageNames = ['AWAKE', 'REM', 'LIGHT', 'DEEP']
+                  return [stageNames[value] || value, 'Stage']
                 }}
-                labelFormatter={(label) => `Time: ${label}`}
+                labelFormatter={(idx: any) => {
+                  const epoch = hypnogramData[idx]
+                  return epoch ? `Time: ${epoch.time}` : `Index: ${idx}`
+                }}
               />
               <Area yAxisId="stage" type="stepAfter" dataKey="stageY" stroke={COLORS.purple} fill="url(#sleepGradient)" strokeWidth={2} />
               <Line yAxisId="hr" type="monotone" dataKey="hr" stroke={COLORS.red} strokeWidth={1.5} dot={false} connectNulls />
@@ -1270,18 +1276,25 @@ function RingControlPage() {
   const { status, logs, heartbeat, heartbeatHistory, progress, wsConnected, send, clearLogs, clearHeartbeat } = useBLEWebSocket()
   const { data: syncInfo } = useSyncInfo()
   const [isHeartbeatActive, setIsHeartbeatActive] = useState(false)
-  const [adapters, setAdapters] = useState<string[]>(['hci0'])
+  interface AdapterInfo {
+    id: string
+    name: string
+    product: string
+  }
+  const [adapters, setAdapters] = useState<AdapterInfo[]>([{ id: 'hci0', name: 'hci0', product: '' }])
   const [selectedAdapter, setSelectedAdapter] = useState('hci0')
   const [selectedFilter] = useState('all')
   const [confirmDialog, setConfirmDialog] = useState<'pair' | 'unpair' | 'factory-reset' | null>(null)
+  const [authKeyInput, setAuthKeyInput] = useState('00426ed816dcece48dd9968c1f36c0b5')
 
   // Fetch available adapters on mount
   useEffect(() => {
     fetch(`${API_BASE}/ble/adapters`)
       .then(res => res.json())
       .then(data => {
-        setAdapters(data.adapters || ['hci0'])
-        setSelectedAdapter(data.default || 'hci0')
+        const adapterList = data.adapters || [{ id: 'hci0', name: 'hci0', product: '' }]
+        setAdapters(adapterList)
+        setSelectedAdapter(data.default || adapterList[0]?.id || 'hci0')
       })
       .catch(() => {})
   }, [])
@@ -1315,6 +1328,13 @@ function RingControlPage() {
   const handlePair = () => setConfirmDialog('pair')
   const handleUnpair = () => setConfirmDialog('unpair')
   const handleFactoryReset = () => setConfirmDialog('factory-reset')
+  const handleSetAuthKey = () => {
+    if (authKeyInput.replace(/\s/g, '').length !== 32) {
+      alert('Auth key must be 32 hex characters (16 bytes)')
+      return
+    }
+    send('set-auth-key', { key: authKeyInput })
+  }
 
   const confirmAction = () => {
     if (confirmDialog === 'pair') {
@@ -1401,7 +1421,7 @@ function RingControlPage() {
                 className="flex-1 bg-black/60 border border-gray-700 rounded px-3 py-2 font-mono text-sm text-cyan-400 focus:outline-none focus:border-cyan-500"
                 disabled={status.connected}
               >
-                {adapters.map(a => <option key={a} value={a}>{a}</option>)}
+                {adapters.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
           </div>
@@ -1487,7 +1507,7 @@ function RingControlPage() {
       )}
 
       {/* Update Ring - Main action */}
-      <Panel color={COLORS.green} title="Update Ring" subtitle="Timestamp-based sync + parse" className="mb-8">
+      <Panel color={COLORS.green} title="Sync Data" subtitle="Fetch events from ring" className="mb-8">
         <div className="flex items-center gap-4 flex-wrap">
           <ActionButton
             label="⟳ Update Ring"
@@ -1495,8 +1515,14 @@ function RingControlPage() {
             disabled={!status.authenticated || status.is_busy}
             color={COLORS.green}
           />
+          <ActionButton
+            label="↻ Full Sync"
+            onClick={() => send('full-sync')}
+            disabled={!status.authenticated || status.is_busy}
+            color={COLORS.orange}
+          />
           <span className="text-xs text-gray-500 font-mono">
-            Fetches new events (by ring_time), parses with reverse date order
+            Update = incremental, Full = clear &amp; fetch all
           </span>
           {progress && (
             <div className="flex-1 min-w-48">
@@ -1559,6 +1585,28 @@ function RingControlPage() {
             color={COLORS.red}
           />
         </div>
+
+        {/* Set Auth Key */}
+        <div className="mt-4 pt-4 border-t border-gray-800">
+          <label className="text-xs text-gray-500 block mb-2">Set Auth Key (32 hex chars)</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={authKeyInput}
+              onChange={(e) => setAuthKeyInput(e.target.value)}
+              placeholder="e.g. 0123456789abcdef0123456789abcdef"
+              className="flex-1 bg-black/60 border border-gray-700 rounded px-3 py-2 font-mono text-sm text-white focus:outline-none focus:border-orange-500"
+              maxLength={32}
+            />
+            <ActionButton
+              label="Set Key"
+              onClick={handleSetAuthKey}
+              disabled={!status.connected || status.is_busy || authKeyInput.replace(/\s/g, '').length !== 32}
+              color={COLORS.orange}
+            />
+          </div>
+        </div>
+
         <p className="text-xs text-gray-500 mt-3">
           Pair requires ring in pairing mode. Unpair removes Bluetooth bond. Factory reset erases ALL ring data.
         </p>

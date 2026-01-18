@@ -33,6 +33,12 @@ COPY ibi_correction_bridge_v7 ibi_correction_bridge_v8 ibi_correction_bridge_v9 
 COPY ibi_correction_bridge_android ./
 
 # =============================================================================
+# Copy Sleep Score Bridges (for native sleep score calculation)
+# =============================================================================
+COPY sleep_score_minutes_ndk ./
+COPY readiness_score_bridge ./
+
+# =============================================================================
 # Copy ML Models (~41MB)
 # =============================================================================
 COPY decrypted_models/ ./decrypted_models/
@@ -61,6 +67,8 @@ RUN mkdir -p /app/input_data
 # Environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+# Default timezone (can be overridden in docker-compose.yml)
+ENV TZ=Europe/Berlin
 ENV QEMU_LD_PREFIX=/app/android_root
 
 # Expose Parser API port

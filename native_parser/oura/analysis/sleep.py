@@ -117,16 +117,13 @@ class SleepAnalyzer:
         if sleepnet is None:
             return None
 
-        try:
-            self._ml_result = sleepnet.predict_from_reader(
-                self._reader,
-                night_index=self._night_index
-            )
-            _cache_result(self._reader, self._night_index, self._ml_result)  # Cache globally
-            return self._ml_result
-        except Exception as e:
-            print(f"[SleepAnalyzer] ML prediction failed: {e}")
-            return None
+        # No try/except - let ML errors propagate (no silent fallbacks)
+        self._ml_result = sleepnet.predict_from_reader(
+            self._reader,
+            night_index=self._night_index
+        )
+        _cache_result(self._reader, self._night_index, self._ml_result)  # Cache globally
+        return self._ml_result
 
     @property
     def uses_ml(self) -> bool:
@@ -188,8 +185,8 @@ class SleepAnalyzer:
     def timestamps(self) -> np.ndarray:
         """Unix timestamps (seconds) for each sleep epoch.
 
-        Uses SleepNet derived timestamps when available (from IBI duration).
-        Falls back to synthetic timestamps otherwise.
+        Uses SleepNet derived timestamps (from IBI duration).
+        Raises RuntimeError if ML is not available.
 
         Returns:
             numpy array of Unix timestamps
@@ -198,12 +195,8 @@ class SleepAnalyzer:
         if ml_result is not None:
             return ml_result.timestamps
 
-        # Fallback: generate synthetic timestamps (assume current time as end)
-        import time
-        n_epochs = len(self._get_native_stages().stages)
-        end_time = time.time()
-        start_time = end_time - (n_epochs * 30)  # 30 sec per epoch
-        return np.linspace(start_time, end_time, n_epochs)
+        # No fallback - require ML for accurate timestamps
+        raise RuntimeError("ML model required for sleep timestamps. Ensure SleepNet is available.")
 
     @property
     def bedtime_start(self) -> float:
@@ -283,9 +276,9 @@ class SleepAnalyzer:
                 # not returned separately. Use reasonable default.
                 timing=80,
             )
-        except Exception:
-            # Fallback to basic score calculation
-            self._score = self._calculate_basic_score()
+        except Exception as e:
+            # No fallback - require EcoreWrapper for accurate scores
+            raise RuntimeError(f"Sleep score calculation failed (EcoreWrapper required): {e}")
 
         return self._score
 

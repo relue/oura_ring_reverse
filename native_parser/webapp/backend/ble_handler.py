@@ -28,7 +28,9 @@ class BLEConnectionManager:
         self.websockets: List[WebSocket] = []
         self.is_busy: bool = False
         self.current_action: Optional[str] = None
-        self.adapter: str = "hci0"
+        # Use first available adapter as default
+        adapters = list_bluetooth_adapters()
+        self.adapter: str = adapters[0] if adapters else "hci0"
         self._heartbeat_task: Optional[asyncio.Task] = None
 
     async def broadcast(self, message: dict):
@@ -125,6 +127,9 @@ class BLEConnectionManager:
         try:
             if adapter:
                 self.adapter = adapter
+                await self.send_log("info", f"Using adapter: {adapter}")
+            else:
+                await self.send_log("info", f"Using default adapter: {self.adapter}")
 
             self.client = OuraClient(adapter=self.adapter)
             self._setup_client_callbacks()
@@ -199,6 +204,53 @@ class BLEConnectionManager:
             return success
         except Exception as e:
             await self.send_log("error", f"Auth error: {e}")
+            return False
+        finally:
+            self.is_busy = False
+            self.current_action = None
+            await self.send_status()
+
+    async def set_auth_key(self, key_hex: str) -> bool:
+        """Set new auth key on ring (can be used after factory reset without auth)."""
+        if not self.client or not self.client.is_connected:
+            await self.send_log("error", "Not connected")
+            return False
+
+        if self.is_busy:
+            await self.send_log("error", "Operation in progress")
+            return False
+
+        self.is_busy = True
+        self.current_action = "set-auth-key"
+        await self.send_status()
+
+        try:
+            # Parse hex key
+            try:
+                new_key = bytes.fromhex(key_hex.replace(' ', ''))
+            except ValueError:
+                await self.send_log("error", "Invalid hex format for auth key")
+                return False
+
+            if len(new_key) != 16:
+                await self.send_log("error", f"Auth key must be 16 bytes (32 hex chars), got {len(new_key)}")
+                return False
+
+            await self.send_log("info", f"Setting new auth key: {key_hex[:16]}...")
+            success = await self.client.set_auth_key(new_key)
+
+            await self.broadcast({
+                "type": "complete",
+                "action": "set-auth-key",
+                "success": success
+            })
+
+            if success:
+                await self.send_log("success", "Auth key updated on ring and saved locally")
+
+            return success
+        except Exception as e:
+            await self.send_log("error", f"Set auth key error: {e}")
             return False
         finally:
             self.is_busy = False
@@ -280,8 +332,8 @@ class BLEConnectionManager:
                             t = int(t, 16) if t.startswith('0x') else int(t)
                         event_filter.add_whitelist(t)
 
-            # Fetch data
-            data = await self.client.get_data(event_filter=event_filter, fetch_all=True)
+            # Fetch data (start from timestamp 0, no binary search needed)
+            data = await self.client.get_data(start_seq=0, event_filter=event_filter, fetch_all=True)
 
             # Save files
             self.client.save_sync_point()
@@ -405,12 +457,47 @@ class BLEConnectionManager:
         await self.send_status()
 
         try:
-            # First disconnect if connected
+            # Get ring address - try client first, then bonded address file, then scan
+            ring_address = None
+
+            # Try 1: Get from connected client's device
+            if self.client and self.client.device:
+                ring_address = self.client.device.address
+                await self.send_log("info", f"Using connected address: {ring_address}")
+
+            # Try 2: Get from bonded address file
+            if not ring_address:
+                bonded_file = DEFAULT_DATA_DIR / "bonded_device.txt"
+                if bonded_file.exists():
+                    ring_address = bonded_file.read_text().strip()
+                    await self.send_log("info", f"Using bonded address: {ring_address}")
+
+            # Try 3: Find Oura in paired devices
+            if not ring_address:
+                import subprocess
+                result = subprocess.run(
+                    ["bluetoothctl", "devices", "Paired"],
+                    capture_output=True, text=True, timeout=5
+                )
+                for line in result.stdout.splitlines():
+                    if "Oura" in line:
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            ring_address = parts[1]
+                            await self.send_log("info", f"Found paired Oura: {ring_address}")
+                            break
+
+            if not ring_address:
+                await self.send_log("error", "No ring address found. Is the ring paired?")
+                return False
+
+            # Disconnect if connected
             if self.client and self.client.is_connected:
                 await self.send_log("info", "Disconnecting before unpair...")
                 await self.client.disconnect()
 
             success = await remove_bond(
+                address=ring_address,
                 adapter=self.adapter,
                 log_callback=lambda level, msg: asyncio.create_task(self.send_log(level, msg))
             )
@@ -495,22 +582,15 @@ class BLEConnectionManager:
                 # Save events to file
                 self.client.save_events_to_file(append=True)
                 await self.send_log("success", f"Fetched {len(data)} new events")
+                await self.send_log("info", "Click 'Parse Events' to update protobuf")
 
-                # Step 3: Parse events to protobuf
-                await self.send_log("info", "Parsing events...")
-                parse_success = await self._do_parse()
-
-                if parse_success:
-                    await self.broadcast({
-                        "type": "complete",
-                        "action": "update-ring",
-                        "success": True,
-                        "event_count": len(data)
-                    })
-                    return True
-                else:
-                    await self.send_log("error", "Parse failed after sync")
-                    return False
+                await self.broadcast({
+                    "type": "complete",
+                    "action": "update-ring",
+                    "success": True,
+                    "event_count": len(data)
+                })
+                return True
             else:
                 await self.send_log("info", "No new events to fetch")
                 await self.broadcast({
@@ -529,6 +609,81 @@ class BLEConnectionManager:
             self.current_action = None
             await self.send_status()
 
+    async def full_sync(self) -> bool:
+        """Full sync: clear existing data and fetch everything from ring.
+
+        Use this after factory reset or to get a fresh copy of all data.
+        """
+        if not self.client or not self.client.is_authenticated:
+            await self.send_log("error", "Not authenticated")
+            return False
+
+        if self.is_busy:
+            await self.send_log("error", "Operation in progress")
+            return False
+
+        self.is_busy = True
+        self.current_action = "full-sync"
+        await self.send_status()
+
+        try:
+            # Step 1: Backup and clear existing events file
+            events_file = self.client.data_dir / "ring_events.txt"
+            if events_file.exists():
+                import shutil
+                from datetime import datetime
+                backup_name = f"ring_events_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                backup_path = self.client.data_dir / backup_name
+                shutil.copy(events_file, backup_path)
+                await self.send_log("info", f"Backed up to {backup_name}")
+                events_file.unlink()
+                await self.send_log("info", "Cleared existing events file")
+
+            # Step 2: Clear sync point
+            sync_file = self.client.data_dir / "sync_point.json"
+            if sync_file.exists():
+                sync_file.unlink()
+                await self.send_log("info", "Cleared sync point")
+
+            # Step 3: Sync time first (establishes time reference)
+            await self.send_log("info", "Syncing time with ring...")
+            await self.client.sync_time()
+            self.client.save_sync_point()
+
+            # Step 4: Fetch ALL events (start from timestamp 0, no binary search needed)
+            await self.send_log("info", "Fetching all events from ring (from timestamp 0)...")
+            data = await self.client.get_data(start_seq=0, fetch_all=True)
+
+            if data:
+                self.client.save_events_to_file(append=False)
+                await self.send_log("success", f"Fetched {len(data)} events")
+                await self.send_log("info", "Click 'Parse Events' to update protobuf")
+
+                await self.broadcast({
+                    "type": "complete",
+                    "action": "full-sync",
+                    "success": True,
+                    "event_count": len(data)
+                })
+                return True
+            else:
+                await self.send_log("warn", "No events fetched from ring")
+                await self.broadcast({
+                    "type": "complete",
+                    "action": "full-sync",
+                    "success": True,
+                    "event_count": 0
+                })
+                return True
+
+        except Exception as e:
+            await self.send_log("error", f"Full sync error: {e}")
+            return False
+        finally:
+            self.is_busy = False
+            self.current_action = None
+            await self.send_status()
+
     async def _do_parse(self) -> bool:
         """Internal helper to run parser and refresh cache."""
         from oura.native.parser import parse_events_async, check_parser_available
@@ -538,10 +693,9 @@ class BLEConnectionManager:
             await self.send_log("error", f"Parser not available: {msg}")
             return False
 
-        def log_callback(level: str, message: str):
-            asyncio.create_task(self.send_log(level, message))
-
-        result = await parse_events_async(log_callback=log_callback)
+        # Note: Don't use log_callback with async parse - it runs in a thread executor
+        # and asyncio.create_task fails without an event loop in that thread
+        result = await parse_events_async()
 
         if result.success:
             await self.send_log("success",
@@ -577,19 +731,18 @@ class BLEConnectionManager:
                 return False
 
             await self.send_log("info", "Starting native parser (QEMU)...")
+            await self.send_log("info", "This may take a minute for large datasets...")
 
-            # Run parser with log callback
-            def log_callback(level: str, message: str):
-                asyncio.create_task(self.send_log(level, message))
-
-            result = await parse_events_async(log_callback=log_callback)
+            # Note: Don't use log_callback - parse_events_async runs in thread executor
+            # and asyncio.create_task fails without an event loop in that thread
+            result = await parse_events_async()
 
             if result.success:
                 await self.send_log("success",
                     f"Parsed {result.input_events} events -> {result.output_size} bytes")
 
                 # Clear cached reader so dashboard uses fresh data
-                import main
+                from webapp.backend import main
                 main._analyzer = None
                 main._reader = None
                 await self.send_log("info", "Data cache refreshed")
